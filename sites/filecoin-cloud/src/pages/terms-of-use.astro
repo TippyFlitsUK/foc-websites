@@ -1,0 +1,12 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import TermsOfUseIsland from '../components/islands/TermsOfUseIsland'
+import matter from 'gray-matter'
+import rawMd from '../app/terms-of-use/terms-of-use.md?raw'
+
+const { content: body } = matter(rawMd)
+---
+
+<BaseLayout title="Terms of Use | Filecoin Onchain Cloud User Agreement" description="Review the Terms of Use for Filecoin Onchain Cloud." path="/terms-of-use">
+  <TermsOfUseIsland body={body} client:only="react" />
+</BaseLayout>

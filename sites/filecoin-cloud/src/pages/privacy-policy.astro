@@ -1,0 +1,12 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import PrivacyPolicyIsland from '../components/islands/PrivacyPolicyIsland'
+import matter from 'gray-matter'
+import rawMd from '../app/privacy-policy/privacy-policy.md?raw'
+
+const { content: body } = matter(rawMd)
+---
+
+<BaseLayout title="Privacy Policy | How Filecoin Protects Your Data" description="Learn how Filecoin collects, uses, and protects your information." path="/privacy-policy">
+  <PrivacyPolicyIsland body={body} client:only="react" />
+</BaseLayout>

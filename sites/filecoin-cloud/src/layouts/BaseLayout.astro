@@ -1,0 +1,72 @@
+---
+import '../styles/globals.css'
+
+interface Props {
+  title: string
+  description: string
+  image?: string
+  path?: string
+}
+
+const { title, description, image = '/image-fallback.webp', path = '' } = Astro.props
+const canonicalURL = new URL(path, Astro.site)
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:site_name" content="Cloud Services with Onchain Verifiability, Programmability & Ownership" />
+    <meta property="og:image" content={new URL(image, Astro.site)} />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:site" content="@_FilOz" />
+    <meta name="twitter:creator" content="@_FilOz" />
+    <meta name="twitter:image" content={new URL(image, Astro.site)} />
+
+    <!-- Fonts -->
+    <link rel="preload" href="/fonts/FunnelSans.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/AspektaVF.woff2" as="font" type="font/woff2" crossorigin />
+
+    <style is:global>
+      @font-face {
+        font-family: 'Funnel Sans';
+        src: url('/fonts/FunnelSans.woff2') format('woff2');
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Aspekta';
+        src: url('/fonts/AspektaVF.woff2') format('woff2');
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      :root {
+        --font-funnel-sans: 'Funnel Sans', Arial, Helvetica, sans-serif;
+        --font-aspekta: 'Aspekta', Arial, Helvetica, sans-serif;
+      }
+    </style>
+
+    <!-- Plausible Analytics -->
+    <script defer data-domain="filecoin.cloud" src="https://plausible.io/js/script.outbound-links.file-downloads.hash.js"></script>
+  </head>
+  <body class="relative flex min-h-screen flex-col font-sans antialiased bg-zinc-950 text-zinc-50" style={`--font-funnel-sans: 'Funnel Sans', Arial, Helvetica, sans-serif; --font-aspekta: 'Aspekta', Arial, Helvetica, sans-serif;`}>
+    <slot />
+  </body>
+</html>

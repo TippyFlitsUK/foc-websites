@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import AgentsIsland from '../../components/islands/AgentsIsland'
+import { getAllRFSData } from '../../app/agents/utils/get-rfs-data'
+
+const rfsDataList = await getAllRFSData()
+const serialized = rfsDataList.map(({ data, slug }) => ({
+  id: data.id,
+  title: data.title,
+  description: data.description,
+  slug,
+}))
+---
+
+<BaseLayout title="Agents: Requests for Startups" description="Explore startup opportunities and requests for proposals in the Filecoin ecosystem." path="/agents">
+  <AgentsIsland rfsDataList={serialized} client:only="react" />
+</BaseLayout>

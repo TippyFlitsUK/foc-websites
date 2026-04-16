@@ -1,0 +1,10 @@
+/* Vendored UI library styles (includes Tailwind base + brand theme + component CSS) */
+@import "./vendor/globals.css";
+
+/* Local overrides */
+@import "./accordion.css";
+
+@theme {
+  --animate-slide-down: slideDown 300ms ease-out;
+  --animate-slide-up: slideUp 300ms ease-out;
+}

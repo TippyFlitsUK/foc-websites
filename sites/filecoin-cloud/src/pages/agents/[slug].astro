@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import RFSDetailIsland from '../../components/islands/RFSDetailIsland'
+import { getAllRFSData, getRFSData } from '../../app/agents/utils/get-rfs-data'
+
+export async function getStaticPaths() {
+  const allRFS = await getAllRFSData()
+  return allRFS.map(({ slug }) => ({ params: { slug } }))
+}
+
+const { slug } = Astro.params
+const rfsData = await getRFSData(slug!)
+---
+
+<BaseLayout title={rfsData.data.title} description={rfsData.data.description} path={`/agents/${slug}`}>
+  <RFSDetailIsland id={rfsData.data.id} content={rfsData.content} client:only="react" />
+</BaseLayout>
