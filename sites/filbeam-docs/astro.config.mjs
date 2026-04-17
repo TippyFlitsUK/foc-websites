@@ -3,7 +3,6 @@ import sitemap from '@astrojs/sitemap'
 import { defineConfig } from 'astro/config'
 import mermaid from 'astro-mermaid'
 import rehypeExternalLinks from 'rehype-external-links'
-import starlightAutoSidebar from 'starlight-auto-sidebar'
 
 const isProd = process.env.PROD_BUILD === '1'
 const site = isProd ? 'https://docs.filbeam.com' : 'https://beam-docs.filecoincloud.io'
@@ -90,9 +89,6 @@ export default defineConfig({
             { label: 'FilBeam Stats API', slug: 'reference/stats-api' },
           ],
         },
-      ],
-      plugins: [
-        starlightAutoSidebar(),
       ],
     }),
     sitemap(),
