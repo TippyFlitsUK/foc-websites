@@ -17,6 +17,11 @@ export default defineConfig({
       [rehypeExternalLinks, { target: '_blank' }],
     ],
   },
+  vite: {
+    // Mermaid is ~750KB on its own; bump the warning threshold so it doesn't
+    // show up as a vite warning on every build.
+    build: { chunkSizeWarningLimit: 2000 },
+  },
   integrations: [
     mermaid({ theme: 'default', autoTheme: true }),
     starlight({
