@@ -20,8 +20,6 @@ concurrency:
 
 env:
   NOVA_VERSION: "latest"
-  # Run JS-based actions on Node 24 (Node 20 is being removed Sept 2026).
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   detect:
@@ -30,7 +28,7 @@ jobs:
       sites: ${{ steps.pick.outputs.sites }}
       worker_changed: ${{ steps.pick.outputs.worker_changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
@@ -58,7 +56,7 @@ jobs:
     if: needs.detect.outputs.worker_changed == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Upload shared Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -76,9 +74,9 @@ jobs:
       matrix:
         site: ${{ fromJson(needs.detect.outputs.sites) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
