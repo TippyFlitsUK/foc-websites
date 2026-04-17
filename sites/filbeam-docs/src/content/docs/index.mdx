@@ -1,0 +1,79 @@
+---
+title: "Welcome"
+---
+
+Filecoin Beam is the blazing-fast data delivery layer for Filecoin.
+
+Specifically, Filecoin Beam serves data stored through the Filecoin Warm Storage Service, a foundational service of the [Filecoin Onchain Cloud](https://filecoin.cloud/).&#x20;
+
+Filecoin Beam is the easiest and most reliable way to get your data back from Filecoin Storage Providers. It speeds up data retrieval, reduces egress bills, and protects Filecoin Storage Providers from the scary side of the internet.
+
+Filecoin Beam speeds up data retrieval, reduces egress bills, and protects Filecoin Storage Providers from scary side of the internet.
+
+In order to use Filecoin Beam, you must store data on the Filecoin Calibration testnet in two ways:
+
+1. Programmatically [using the Synapse SDK](reference/synapse-sdk)
+2. Manually [using a demo web app](using-demo-web-app/about)
+
+And before you do anything, you must [set up your wallet](/getting-started/quickstart/) first.
+
+### Jump right in
+
+<div class="hero-grid">
+  <a class="hero-card" href="/getting-started/quickstart/">
+    <img src="/gitbook-assets/illustration3.png" alt="" />
+    <strong>Get Started</strong>
+    <span>Set Up Your Wallet</span>
+  </a>
+  <a class="hero-card" href="/reference/synapse-sdk/">
+    <img src="/gitbook-assets/illustration2.png" alt="" />
+    <strong>Synapse SDK</strong>
+    <span>Learn with Filecoin's SDK</span>
+  </a>
+  <a class="hero-card" href="/using-demo-web-app/about/">
+    <img src="/gitbook-assets/illustration1.png" alt="" />
+    <strong>Demo Web App</strong>
+    <span>Start in the demo app</span>
+  </a>
+</div>
+
+<style>{`
+  .hero-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0 2rem;
+  }
+  .hero-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.75rem;
+    text-decoration: none;
+    color: var(--sl-color-white);
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .hero-card:hover {
+    border-color: var(--sl-color-gray-3);
+    transform: translateY(-2px);
+  }
+  .hero-card img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .hero-card strong {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .hero-card span {
+    font-size: 0.85rem;
+    color: var(--sl-color-gray-3);
+  }
+`}</style>
+
+N.B. File size is limited to 254 MiB. Support for larger files is coming later this year.

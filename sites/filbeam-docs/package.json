@@ -1,0 +1,30 @@
+{
+  "name": "filbeam-docs",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "astro dev --host",
+    "check": "astro check",
+    "build": "astro build",
+    "preview": "astro preview --host"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.2",
+    "@astrojs/starlight": "^0.38.3",
+    "@mermaid-js/layout-elk": "^0.2.1",
+    "astro": "^6.1.7",
+    "astro-mermaid": "^2.0.1",
+    "mermaid": "^11.14.0",
+    "rehype-external-links": "^3.0.0",
+    "sharp": "^0.34.4",
+    "starlight-auto-sidebar": "^0.2.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.6.3"
+  }
+}
