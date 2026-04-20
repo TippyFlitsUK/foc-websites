@@ -1,0 +1,34 @@
+import { parseArgs } from 'node:util'
+import { query } from './cloudflare-client.js'
+
+const {
+  values: { client },
+} = parseArgs({
+  options: { client: { type: 'string' } },
+})
+
+const response = await query(
+  `
+  SELECT
+      DATE(rl.timestamp) AS day,
+      ds.payer_address,
+      COUNT(rl.id) AS total_requests,
+      ROUND(SUM(rl.egress_bytes) / 1073741824.0, 2) AS total_egress_gib,
+      SUM(CASE WHEN rl.cache_miss = 1 THEN 1 ELSE 0 END) AS cache_miss_requests,
+      SUM(CASE WHEN rl.cache_miss = 0 THEN 1 ELSE 0 END) AS cache_hit_requests
+  FROM
+      retrieval_logs rl
+  JOIN
+      data_sets ds ON rl.data_set_id = ds.id
+  WHERE
+      ds.payer_address = $1 AND
+      day < DATE('now')
+  GROUP BY
+      day, ds.payer_address
+  ORDER BY
+      day DESC;
+`,
+  [client],
+)
+
+process.stdout.write(JSON.stringify(response.result[0].results))
