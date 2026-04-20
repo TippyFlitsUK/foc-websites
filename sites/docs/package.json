@@ -1,0 +1,29 @@
+{
+  "name": "docs",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0",
+    "check": "astro check",
+    "build": "astro check && astro build",
+    "preview": "astro preview --host 0.0.0.0"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.2",
+    "@astrojs/starlight": "^0.38.3",
+    "@filoz/synapse-core": "^0.4.1",
+    "astro": "^6.1.7",
+    "astro-mermaid": "^2.0.1",
+    "mermaid": "^11.12.2",
+    "rehype-external-links": "^3.0.0",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

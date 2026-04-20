@@ -1,0 +1,11 @@
+---
+title: ErrorType
+next: true
+prev: true
+editUrl: false
+
+---
+
+> **ErrorType** = [`ErrorType`](/reference/filoz/synapse-core/chains/namespaces/aschain/type-aliases/errortype/) \| `MulticallErrorType` \| [`ErrorType`](/reference/filoz/synapse-core/warm-storage/namespaces/getapprovedprovideridscall/type-aliases/errortype/) \| [`ErrorType`](/reference/filoz/synapse-core/sp-registry/namespaces/getpdpproviderscall/type-aliases/errortype/)
+
+Defined in: [packages/synapse-core/src/sp-registry/get-pdp-providers.ts:151](https://github.com/FilOzone/synapse-sdk/blob/3122f8d73d8ad2c239837ef6f561996a746d514e/packages/synapse-core/src/sp-registry/get-pdp-providers.ts#L151)

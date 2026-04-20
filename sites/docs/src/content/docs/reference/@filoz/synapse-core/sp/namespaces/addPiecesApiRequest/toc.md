@@ -1,0 +1,18 @@
+---
+title: addPiecesApiRequest
+next: true
+prev: true
+editUrl: false
+sidebar:
+  order: 0
+
+---
+
+## Type Aliases
+
+| Type Alias | Description |
+| ------ | ------ |
+| [ErrorType](/reference/filoz/synapse-core/sp/namespaces/addpiecesapirequest/type-aliases/errortype/) | - |
+| [OptionsType](/reference/filoz/synapse-core/sp/namespaces/addpiecesapirequest/type-aliases/optionstype/) | - |
+| [OutputType](/reference/filoz/synapse-core/sp/namespaces/addpiecesapirequest/type-aliases/outputtype/) | - |
+| [RequestBody](/reference/filoz/synapse-core/sp/namespaces/addpiecesapirequest/type-aliases/requestbody/) | - |

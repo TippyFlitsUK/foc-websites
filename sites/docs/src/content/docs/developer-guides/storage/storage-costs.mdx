@@ -1,0 +1,181 @@
+---
+title: Storage Costs
+description: Calculate storage costs and fund your account for future storage needs
+sidebar:
+  order: 2
+---
+
+Understanding storage costs helps you budget effectively and avoid service interruptions. This guide explains how to calculate costs and fund your account for Filecoin storage.
+
+## How Storage Costs Work
+
+Storage operates on a **pay-per-epoch** model where you deposit USDFC tokens and set allowances that control how much the storage service can spend.
+
+:::tip[What is an Epoch?]
+An **epoch** is Filecoin's block time, which is 30 seconds. Storage costs are calculated per epoch, ensuring you only pay for the storage time you actually use.
+:::
+
+### Pricing Components
+
+| Component | Cost | Notes |
+| -------------- | ------------------ | -------------------------------------------------------- |
+| **Storage** | $2.50/TiB/month | Minimum $0.06/month per data set (~24.567 GiB threshold) |
+| **Sybil Fee** | 0.1 USDFC (one-time) | Per new data set creation; prevents state-growth spam |
+| **CDN Egress** | $14/TiB downloaded | 1 USDFC top-up ≈ 71.5 GiB of downloads |
+| **CDN Setup** | 1 USDFC (one-time) | Per data set; reusing existing data sets incurs no cost |
+
+:::note[Be aware]
+Per month means **per 30 days** here, not calendar month like a traditional storage service.
+:::
+**Pricing Logic:**
+
+- Storage **< 24.567 GiB**: Minimum $0.06/month applies
+- Storage **≥ 24.567 GiB**: Actual cost `(bytes / TiB) × $2.50/month`
+- CDN data sets require 1 USDFC setup on first creation only
+- CDN egress credits can be topped up anytime
+
+### Real-World Cost Examples
+
+#### Example 1: NFT Collection (10,000 × 5 KiB ≈ 48.82 MiB)
+
+```ts twoslash
+// @lib: esnext,dom
+// 48.82 MiB less than 24.567 GiB threshold
+// Price is $0.06/month
+const PRICE_PER_MONTH = 0.06;
+const months = 24;
+const PRICE_FOR_24_MONTHS = PRICE_PER_MONTH * 24; // 1.44 USDFC
+```
+
+| Duration  | Total Cost |
+| --------- | ---------- |
+| 1 month   | 0.06 USDFC |
+| 24 months | 1.44 USDFC |
+
+---
+
+#### Example 2: User Content Platform with CDN
+
+- **Storage:** 1,000 users × 100 MiB ≈ 100,000 MiB
+- **Traffic:** 1,000 users × 100 MiB/month ≈ 100,000 MiB/month egress
+
+```ts twoslash
+// @lib: esnext,dom
+const STORAGE_PRICE_PER_TIB_PER_MONTH = 2.5; // $2.50/TiB/month
+const CDN_EGRESS_PRICE_PER_TIB = 14; // $14/TiB downloaded
+const storageMiB = 100_000;
+const egressMiB = 100_000;
+
+// Storage: 100,000 MiB ≈ 0.0953 TiB
+const storageTiB = storageMiB / 1024 / 1024;
+
+// Egress: 100,000 MiB ≈ 0.0953 TiB
+const egressTiB = egressMiB / 1024 / 1024;
+
+// Storage cost per month: 0.0953 TiB × $2.50 ≈ $0.238/month
+const storageCostPerMonth = storageTiB * STORAGE_PRICE_PER_TIB_PER_MONTH;
+
+// Egress cost per month: 0.0953 TiB × $14 ≈ $1.334/month
+const egressCostPerMonth = egressTiB * CDN_EGRESS_PRICE_PER_TIB;
+
+// Total cost per month: $0.238/month + $1.334/month ≈ $1.572/month
+const totalCostPerMonth = storageCostPerMonth + egressCostPerMonth;
+
+// Total cost for 24 months: $1.572/month × 24 ≈ $37.728
+const totalCostFor24Months = totalCostPerMonth * 24;
+```
+
+| Cost Component | Per Month | 24 Months |
+| -------------- | ---------------- | ----------------- |
+| Storage | ≈ 0.238 USDFC | ≈ 5.71 USDFC |
+| CDN Egress | ≈ 1.334 USDFC | ≈ 32.016 USDFC |
+| **Total** | **≈ 1.572 USDFC** | **≈ 37.728 USDFC** |
+
+## Warm Storage Service Approvals
+
+Before uploading, the **WarmStorage operator** must be approved and your account must be funded. FWSS requires a 30-day prepayment buffer — when your balance drops below 30 days, the provider may remove your data.
+
+The SDK's `prepare()` method handles all of this automatically. It computes the exact deposit needed, checks whether the FWSS operator is approved, and returns a single transaction that handles both.
+
+---
+
+## Querying Upload Costs
+
+Use `getUploadCosts()` to preview costs without executing any transaction. This is useful for displaying pricing in a UI or letting users confirm before proceeding.
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse, formatUnits } from "@filoz/synapse-sdk";
+import { privateKeyToAccount } from 'viem/accounts'
+const synapse = Synapse.create({ account: privateKeyToAccount('0x...'), source: 'my-app' });
+// ---cut---
+const costs = await synapse.storage.getUploadCosts({
+  dataSize: 1073741824n, // 1 GiB in bytes
+})
+
+```
+
+The returned `UploadCosts` object contains:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `rate.perEpoch` | `bigint` | Storage rate per epoch (30 seconds) |
+| `rate.perMonth` | `bigint` | Storage rate per month (for display) |
+| `depositNeeded` | `bigint` | USDFC to deposit (`0n` if sufficient funds) |
+| `needsFwssMaxApproval` | `boolean` | Whether FWSS operator approval is needed |
+| `ready` | `boolean` | `true` when no deposit or approval is needed |
+
+---
+
+## Funding Your Account
+
+Use `prepare()` to compute costs and get a ready-to-execute transaction. This is the recommended approach for most use cases — it replaces the previous manual flow of calculating allowances, checking approvals, and branching between deposit/approve methods.
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse, formatUnits } from "@filoz/synapse-sdk";
+import { privateKeyToAccount } from 'viem/accounts'
+const synapse = Synapse.create({ account: privateKeyToAccount('0x...'), source: 'my-app' });
+const totalCostNeeded = null as unknown as bigint;
+const rateAllowanceNeeded = null as unknown as bigint;
+const lockupAllowanceNeeded = null as unknown as bigint;
+const approval = await synapse.payments.serviceApproval();
+const accountInfo = await synapse.payments.accountInfo();
+// ---cut---
+// Compute costs and get a transaction (if needed)
+const prep = await synapse.storage.prepare({
+  dataSize: 1073741824n, // 1 GiB
+})
+
+// Inspect costs
+console.log("Rate per month:", formatUnits(prep.costs.rate.perMonth))
+console.log("Deposit needed:", formatUnits(prep.costs.depositNeeded))
+
+// Execute if the account isn't ready
+if (prep.transaction) {
+  console.log("Deposit amount:", formatUnits(prep.transaction.depositAmount))
+  console.log("Includes approval:", prep.transaction.includesApproval)
+
+  const { hash } = await prep.transaction.execute()
+  console.log("Transaction confirmed:", hash)
+}
+
+// Now safe to upload
+```
+
+`prepare()` returns:
+
+- **`costs`**: The full `UploadCosts` breakdown
+- **`transaction`**: A transaction object with `execute()`, or `null` if the account is already ready
+
+The transaction automatically picks the right contract call:
+
+- **Needs deposit + approval**: calls `depositWithPermitAndApproveOperator`
+- **Needs approval only**: calls `approveService`
+- **Needs deposit only**: calls `depositWithPermit`
+- **Already ready**: returns `transaction: null`
+
+## Next Steps
+
+- [Storage Operations](/developer-guides/storage/storage-operations/) - Storage concepts and workflows
+- [Storage Context](/developer-guides/storage/storage-context/) - Contexts and data sets

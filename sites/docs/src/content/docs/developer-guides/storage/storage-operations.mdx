@@ -1,0 +1,391 @@
+---
+title: Storage Operations
+description: Learn how to store and retrieve data using the Synapse SDK.
+sidebar:
+  order: 1
+---
+
+:::tip[Purpose]
+This guide shows you how to get started with storage operations in Synapse SDK.
+You'll learn how to upload data with multi-copy durability, handle results, and retrieve stored content.
+
+**Audience**: Developers new to Synapse SDK storage capabilities
+**Time to complete**: 10-15 minutes
+**Prerequisites**: Basic TypeScript knowledge, Synapse SDK installed
+:::
+
+This guide covers the primary storage API — `synapse.storage.upload()` — which stores your data with multiple providers for redundancy. For manual control over each upload phase, see [Split Operations](/developer-guides/storage/storage-context/).
+
+## Key Concepts
+
+**Data Set**: A logical container of pieces stored with one provider. When a data set is created, a payment rail is established with that provider. All pieces in the data set share this single payment rail and are verified together via PDP proofs.
+
+**PieceCID**: Content-addressed identifier for your data (format: `bafkzcib...`). Automatically calculated during upload and used to retrieve data from any provider.
+
+**Metadata**: Optional key-value pairs for organization:
+
+- **Data Set Metadata**: Max 10 keys (e.g., `project`, `environment`)
+- **Piece Metadata**: Max 5 keys per piece (e.g., `filename`, `contentType`)
+
+**Copies and Durability**: By default, `upload()` stores your data with 2 independent providers. Each provider maintains its own data set with separate PDP proofs and payment rails. If one provider goes down, your data is still available from the other.
+
+**Storage Manager**: The main entry point for storage operations (`synapse.storage`). Handles provider selection, multi-copy orchestration, data set management, and provider-agnostic downloads.
+
+## Storage Approaches
+
+### Upload Examples
+
+Upload data with a single call — the SDK selects providers and handles multi-copy replication automatically:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk";
+import { privateKeyToAccount } from 'viem/accounts'
+
+const synapse = Synapse.create({ account: privateKeyToAccount('0x...'), source: 'my-app' });
+
+const data = new Uint8Array([1, 2, 3, 4, 5])
+
+const { pieceCid, size, complete, copies, failedAttempts } = await synapse.storage.upload(data)
+
+console.log("PieceCID:", pieceCid.toString())
+console.log("Size:", size, "bytes")
+console.log("Stored on", copies.length, "providers")
+
+for (const copy of copies) {
+  console.log(`  Provider ${copy.providerId}: role=${copy.role}, dataSet=${copy.dataSetId}`)
+}
+
+if (!complete) {
+  console.warn("Some copies failed:", failedAttempts)
+}
+```
+
+:::caution[Always check the result]
+`upload()` returns a result as long as **at least one** copy commits on-chain. It only throws when zero copies succeed. You **must** check `complete` to know whether all requested copies were stored — a successful return does not guarantee all copies succeeded.
+:::
+
+The result contains:
+
+- **`complete`** — `true` when all requested copies were stored and committed on-chain. This is the primary field to check.
+- **`requestedCopies`** — the number of copies that were requested (default: 2)
+- **`pieceCid`** — content address of your data, used for downloads
+- **`size`** — size of the uploaded data in bytes
+- **`copies`** — array of successful copies, each with `providerId`, `dataSetId`, `pieceId`, `role` (`'primary'` or `'secondary'`), `retrievalUrl`, and `isNewDataSet`
+- **`failedAttempts`** — providers that were tried but did not produce a copy. The SDK retries failed secondaries with alternate providers, so a non-empty array often just means a provider was swapped out. These are diagnostic, check `complete` for the actual outcome.
+
+#### Upload with Metadata
+
+Attach metadata to organize uploads. The SDK reuses existing data sets when metadata matches, avoiding duplicate payment rails:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk";
+import { privateKeyToAccount } from 'viem/accounts'
+
+const synapse = Synapse.create({ account: privateKeyToAccount('0x...'), source: 'my-app' });
+
+const data = new TextEncoder().encode("Hello, Filecoin!")
+
+const result = await synapse.storage.upload(data, {
+  metadata: {
+    Application: "My DApp",
+    Version: "1.0.0",
+    Category: "Documents",
+  },
+  pieceMetadata: {
+    filename: "hello.txt",
+    contentType: "text/plain",
+  },
+})
+
+console.log("Uploaded:", result.pieceCid.toString())
+```
+
+Subsequent uploads with the same `metadata` reuse the same data sets and payment rails.
+
+:::tip[Prepare Before Uploading]
+Before your first upload, call `prepare()` to ensure your account is funded and the storage service is approved. It computes the exact deposit needed and returns a single transaction to execute:
+
+```ts
+import { Synapse } from "@filoz/synapse-sdk"
+import { privateKeyToAccount } from "viem/accounts"
+
+const synapse = Synapse.create({ account: privateKeyToAccount("0x...") })
+
+const prep = await synapse.storage.prepare({ dataSize: 1073741824n }) // 1 GiB
+if (prep.transaction) {
+  await prep.transaction.execute()
+}
+```
+
+See the [Storage Costs guide](/developer-guides/storage/storage-costs/) for a full breakdown.
+:::
+
+## Upload with Callbacks
+
+Track the lifecycle of a multi-copy upload with callbacks:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk"
+import { privateKeyToAccount } from "viem/accounts"
+
+const synapse = Synapse.create({ account: privateKeyToAccount("0x..."), source: 'my-app' })
+
+const data = new Uint8Array(1024) // 1KB of data
+
+const result = await synapse.storage.upload(data, {
+  callbacks: {
+    onStored: (providerId, pieceCid) => {
+      console.log(`Data stored on provider ${providerId}`)
+    },
+    onCopyComplete: (providerId, pieceCid) => {
+      console.log(`Secondary copy complete on provider ${providerId}`)
+    },
+    onCopyFailed: (providerId, pieceCid, error) => {
+      console.warn(`Copy failed on provider ${providerId}:`, error.message)
+    },
+    onPullProgress: (providerId, pieceCid, status) => {
+      console.log(`Pull to provider ${providerId}: ${status}`)
+    },
+    onPiecesAdded: (txHash, providerId, pieces) => {
+      console.log(`On-chain commit submitted: ${txHash}`)
+    },
+    onPiecesConfirmed: (dataSetId, providerId, pieces) => {
+      console.log(`Confirmed on-chain: dataSet=${dataSetId}, provider=${providerId}`)
+    },
+    onProgress: (bytesUploaded) => {
+      console.log(`Uploaded ${bytesUploaded} bytes`)
+    },
+  },
+})
+```
+
+Callback lifecycle:
+
+1. **`onProgress`** — fires during upload to primary provider
+2. **`onStored`** — primary upload complete, piece parked on SP
+3. **`onPullProgress`** — SP-to-SP transfer status for secondaries
+4. **`onCopyComplete`** / **`onCopyFailed`** — secondary pull result
+5. **`onPiecesAdded`** — commit transaction submitted
+6. **`onPiecesConfirmed`** — commit confirmed on-chain
+
+### Controlling Copy Count
+
+Adjust the number of copies for your durability requirements:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk"
+import { privateKeyToAccount } from "viem/accounts"
+
+const synapse = Synapse.create({ account: privateKeyToAccount("0x..."), source: 'my-app' })
+
+const data = new Uint8Array(256)
+
+// Store 3 copies for higher redundancy
+const result3 = await synapse.storage.upload(data, { copies: 3 })
+console.log("3 copies:", result3.copies.length)
+
+// Store a single copy when redundancy isn't needed
+const result1 = await synapse.storage.upload(data, { copies: 1 })
+console.log("1 copy:", result1.copies.length)
+```
+
+The default is 2 copies. The first copy is stored on an **endorsed** provider (high trust, curated), and secondary copies are pulled via SP-to-SP transfer from approved providers.
+
+### Understanding the Result
+
+`upload()` is designed around **partial success over atomicity**: it commits whatever succeeded rather than throwing away successful work. This means the return value is the primary interface for understanding what happened — not just whether it threw.
+
+#### When `upload()` throws
+
+`upload()` only throws in these cases:
+
+| Error | What happened | What to do |
+| ------- | --------------- | ------------ |
+| **`StoreError`** | Primary upload failed — no data committed anywhere | Retry the upload |
+| **`CommitError`** | Data is stored on providers but **all** on-chain commits failed | Use [split operations](/developer-guides/storage/storage-context/) to retry `commit()` without re-uploading |
+| Selection error | No endorsed provider available or reachable | Check provider health / network |
+
+#### When `upload()` returns
+
+If `upload()` returns (no throw), **at least one copy** is committed on-chain. But the result may contain fewer copies than requested. Every copy in `copies[]` represents a committed on-chain data set that the user is now paying for.
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk"
+import { privateKeyToAccount } from "viem/accounts"
+
+const synapse = Synapse.create({ account: privateKeyToAccount("0x..."), source: 'my-app' })
+
+const data = new Uint8Array(256)
+
+const result = await synapse.storage.upload(data, { copies: 2 })
+
+// Check overall success: complete === true means all requested copies succeeded
+if (!result.complete) {
+  console.warn(`Only ${result.copies.length}/${result.requestedCopies} copies succeeded`)
+  for (const attempt of result.failedAttempts) {
+    console.warn(`  Provider ${attempt.providerId} (${attempt.role}): ${attempt.error}`)
+  }
+}
+
+// Every copy is committed and being paid for
+for (const copy of result.copies) {
+  console.log(`Provider ${copy.providerId}, dataset ${copy.dataSetId}, piece ${copy.pieceId}`)
+}
+```
+
+#### Auto-retry behavior
+
+For auto-selected providers (no explicit `providerIds` or `dataSetIds`), the SDK automatically retries failed secondaries with alternate providers up to 5 times. If you explicitly specify providers, the SDK respects your choice and does not retry.
+
+## Retrieval Approaches
+
+Download from any provider that has the piece — the SDK resolves the provider automatically:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk"
+import { privateKeyToAccount } from "viem/accounts"
+
+const synapse = Synapse.create({ account: privateKeyToAccount("0x..."), source: 'my-app' })
+
+// Download using PieceCID from a previous upload
+const pieceCid = "bafkzcib..." // from upload result
+const bytes = await synapse.storage.download({ pieceCid })
+const text = new TextDecoder().decode(bytes)
+console.log("Downloaded:", text)
+```
+
+For CDN-accelerated downloads:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk"
+import { privateKeyToAccount } from "viem/accounts"
+
+// Enable CDN globally
+const synapse = Synapse.create({
+  account: privateKeyToAccount("0x..."),
+  source: 'my-app',
+  withCDN: true,
+})
+
+const bytes = await synapse.storage.download({ pieceCid: "bafkzcib..." })
+
+// Or per-download:
+const bytes2 = await synapse.storage.download({
+  pieceCid: "bafkzcib...",
+  withCDN: true,
+})
+```
+
+## Data Set Management
+
+:::note[When You Need This]
+These APIs are useful when you want to inspect existing data sets, query stored pieces, or retrieve metadata. For basic upload/download, you don't need these.
+:::
+
+### Getting all data sets
+
+Retrieve all data sets owned by your account to inspect piece counts, CDN status, and metadata:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk";
+import { privateKeyToAccount } from 'viem/accounts'
+
+const synapse = Synapse.create({ account: privateKeyToAccount('0x...'), source: 'my-app' });
+const dataSets = await synapse.storage.findDataSets();
+
+for (const ds of dataSets) {
+  console.log(`Dataset ${ds.pdpVerifierDataSetId}:`, {
+    live: ds.isLive,
+    cdn: ds.withCDN,
+    pieces: ds.activePieceCount,
+    metadata: ds.metadata
+  });
+}
+```
+
+### Getting data set pieces
+
+List all pieces stored in a specific data set by iterating through a context:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk";
+import { privateKeyToAccount } from 'viem/accounts'
+
+const synapse = Synapse.create({ account: privateKeyToAccount('0x...'), source: 'my-app' });
+const dataSetId = 1n;
+// ---cut---
+const context = await synapse.storage.createContext({ dataSetId });
+
+const pieces = [];
+for await (const piece of context.getPieces()) {
+  pieces.push(piece);
+}
+console.log(`Found ${pieces.length} pieces`);
+```
+
+### Getting piece metadata
+
+Access custom metadata attached to individual pieces:
+
+```ts twoslash
+// @lib: esnext,dom
+const dataSetId = 1n;
+const piece = null as unknown as { pieceCid: string; pieceId: bigint };
+// ---cut---
+import { WarmStorageService } from "@filoz/synapse-sdk/warm-storage";
+import { privateKeyToAccount } from 'viem/accounts'
+
+const warmStorage =  WarmStorageService.create({ account: privateKeyToAccount('0x...') });
+
+const metadata = await warmStorage.getPieceMetadata({ dataSetId, pieceId: piece.pieceId });
+console.log("Piece metadata:", metadata);
+```
+
+## Getting the size of a specific piece
+
+Extract the size directly from a PieceCID using Synapse Core:
+
+```ts twoslash
+// @lib: esnext,dom
+import { getSizeFromPieceCID } from "@filoz/synapse-core/piece";
+
+const pieceCid = "bafkzcib...";
+const size = getSizeFromPieceCID(pieceCid);
+console.log(`Piece size: ${size} bytes`);
+```
+
+## Storage Information
+
+Query service-wide pricing, available providers, and network parameters:
+
+```ts twoslash
+// @lib: esnext,dom
+import { Synapse } from "@filoz/synapse-sdk";
+import { privateKeyToAccount } from 'viem/accounts'
+
+const synapse = Synapse.create({ account: privateKeyToAccount('0x...'), source: 'my-app' });
+// ---cut---
+const info = await synapse.storage.getStorageInfo();
+console.log("Price/TiB/month:", info.pricing.noCDN.perTiBPerMonth);
+console.log("Providers:", info.providers.length);
+
+const providerInfo = await synapse.getProviderInfo("0x...");
+console.log("PDP URL:", providerInfo.pdp.serviceURL);
+```
+
+## Next Steps
+
+- **[Split Operations](/developer-guides/storage/storage-context/)** — Manual control over store, pull, and commit phases for batch uploads, custom error handling, and direct core library usage.
+
+- **[Plan Storage Costs](/developer-guides/storage/storage-costs/)** — Calculate your monthly costs and understand funding requirements.
+
+- **[Payment Management](/developer-guides/payments/payment-operations/)** — Manage deposits, approvals, and payment rails.

@@ -1,0 +1,14 @@
+---
+title: sessionKeyRegistryAbi
+next: true
+prev: true
+editUrl: false
+
+---
+
+> `const` **sessionKeyRegistryAbi**: readonly \[\{ `inputs`: readonly \[\{ `internalType`: `"address"`; `name`: `"user"`; `type`: `"address"`; \}, \{ `internalType`: `"address"`; `name`: `"signer"`; `type`: `"address"`; \}, \{ `internalType`: `"bytes32"`; `name`: `"permission"`; `type`: `"bytes32"`; \}\]; `name`: `"authorizationExpiry"`; `outputs`: readonly \[\{ `internalType`: `"uint256"`; `name`: `""`; `type`: `"uint256"`; \}\]; `stateMutability`: `"view"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `internalType`: `"address"`; `name`: `"signer"`; `type`: `"address"`; \}, \{ `internalType`: `"uint256"`; `name`: `"expiry"`; `type`: `"uint256"`; \}, \{ `internalType`: `"bytes32[]"`; `name`: `"permissions"`; `type`: `"bytes32[]"`; \}, \{ `internalType`: `"string"`; `name`: `"origin"`; `type`: `"string"`; \}\]; `name`: `"login"`; `outputs`: readonly \[\]; `stateMutability`: `"nonpayable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `internalType`: `"address payable"`; `name`: `"signer"`; `type`: `"address"`; \}, \{ `internalType`: `"uint256"`; `name`: `"expiry"`; `type`: `"uint256"`; \}, \{ `internalType`: `"bytes32[]"`; `name`: `"permissions"`; `type`: `"bytes32[]"`; \}, \{ `internalType`: `"string"`; `name`: `"origin"`; `type`: `"string"`; \}\]; `name`: `"loginAndFund"`; `outputs`: readonly \[\]; `stateMutability`: `"payable"`; `type`: `"function"`; \}, \{ `inputs`: readonly \[\{ `internalType`: `"address"`; `name`: `"signer"`; `type`: `"address"`; \}, \{ `internalType`: `"bytes32[]"`; `name`: `"permissions"`; `type`: `"bytes32[]"`; \}, \{ `internalType`: `"string"`; `name`: `"origin"`; `type`: `"string"`; \}\]; `name`: `"revoke"`; `outputs`: readonly \[\]; `stateMutability`: `"nonpayable"`; `type`: `"function"`; \}, \{ `anonymous`: `false`; `inputs`: readonly \[\{ `indexed`: `true`; `internalType`: `"address"`; `name`: `"identity"`; `type`: `"address"`; \}, \{ `indexed`: `false`; `internalType`: `"address"`; `name`: `"signer"`; `type`: `"address"`; \}, \{ `indexed`: `false`; `internalType`: `"uint256"`; `name`: `"expiry"`; `type`: `"uint256"`; \}, \{ `indexed`: `false`; `internalType`: `"bytes32[]"`; `name`: `"permissions"`; `type`: `"bytes32[]"`; \}, \{ `indexed`: `false`; `internalType`: `"string"`; `name`: `"origin"`; `type`: `"string"`; \}\]; `name`: `"AuthorizationsUpdated"`; `type`: `"event"`; \}\]
+
+Defined in: [packages/synapse-core/src/abis/generated.ts:5591](https://github.com/FilOzone/synapse-sdk/blob/3122f8d73d8ad2c239837ef6f561996a746d514e/packages/synapse-core/src/abis/generated.ts#L5591)
+
+- [__View Contract on Filecoin Mainnet Filfox__](https://filfox.info/en/address/0x74FD50525A958aF5d484601E252271f9625231aB)
+- [__View Contract on Filecoin Calibration Filscan__](https://calibration.filscan.io/address/0x518411c2062E119Aaf7A8B12A2eDf9a939347655)

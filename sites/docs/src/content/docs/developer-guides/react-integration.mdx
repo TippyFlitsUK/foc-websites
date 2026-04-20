@@ -1,0 +1,163 @@
+---
+title: React Integration
+description: Guide to integrating Synapse into React applications using Synapse React hooks.
+sidebar:
+  order: 7
+---
+
+## Setup
+
+**Install dependencies:**
+
+```bash
+npm install @filoz/synapse-react wagmi viem @tanstack/react-query
+```
+
+**Requirements:**
+
+- React 18+, Wagmi 3.x, viem 2.x, TanStack Query 5.x
+- Connected Web3 wallet
+- Supported networks: Filecoin Mainnet, Filecoin Calibration
+
+**Wagmi config:**
+
+```tsx twoslash
+// @lib: esnext,dom
+import { calibration, mainnet } from "@filoz/synapse-core/chains";
+import { createConfig, http } from "wagmi";
+
+export const wagmiConfig = createConfig({
+  chains: [calibration, mainnet],
+  transports: {
+    [mainnet.id]: http(),
+    [calibration.id]: http(),
+  },
+});
+```
+
+**Provider setup:**
+
+Synapse React hooks work within [Wagmi](https://wagmi.sh) and [TanStack Query](https://tanstack.com/query) providers. Set these up at the root of your app:
+
+```tsx twoslash
+// @lib: esnext,dom
+import type { Config } from "wagmi";
+const config = {} as Config;
+const YourApp = () => <div />;
+// ---cut---
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider } from "wagmi";
+
+const queryClient = new QueryClient();
+
+export default function App() {
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <YourApp />
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+}
+```
+
+## Payments
+
+Query account info and make deposits using hooks:
+
+```tsx twoslash
+// @lib: esnext,dom
+import { useAccountInfo, useDepositAndApprove } from "@filoz/synapse-react";
+import { parseUnits } from "viem";
+import { useAccount } from "wagmi";
+
+const PaymentsExample = () => {
+  const { address } = useAccount();
+  const { data: account, isLoading } = useAccountInfo(
+    address ? { address, watch: true } : { watch: true }
+  );
+
+  const deposit = useDepositAndApprove({
+    onHash: (hash) => console.log("Tx:", hash),
+  });
+
+  if (!address) return <div>Connect wallet</div>;
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <p>Available: {account?.availableFunds.toString()} USDFC</p>
+      <button
+        onClick={() => deposit.mutate({ amount: parseUnits("1", 18) })}
+        disabled={deposit.isPending}
+      >
+        {deposit.isPending ? "Depositing..." : "Deposit 1 USDFC"}
+      </button>
+    </div>
+  );
+};
+```
+
+## Storage
+
+Upload files and list data sets:
+
+```tsx twoslash
+// @lib: esnext,dom
+import { useUpload, useDataSets, useProviders } from "@filoz/synapse-react";
+import { useState } from "react";
+import { useAccount } from "wagmi";
+
+const StorageExample = () => {
+  const { address } = useAccount();
+  const { data: providers } = useProviders();
+  const { data: dataSets } = useDataSets(address ? { address } : {});
+  const [file, setFile] = useState<File>();
+
+  const upload = useUpload({
+    source: 'synapse',
+    callbacks :{
+      onPiecesAdded: (hash) => console.log("Tx:", hash),
+    }
+  });
+
+  if (!address) return <div>Connect wallet</div>;
+
+  return (
+    <div>
+      <p>Providers: {providers?.length ?? 0}</p>
+      <p>Data sets: {dataSets?.length ?? 0}</p>
+
+      {dataSets?.map((ds) => (
+        <div key={ds.dataSetId.toString()}>
+          <p>Dataset {ds.dataSetId.toString()}: {ds.pieces.length} pieces</p>
+          <input
+            type="file"
+            onChange={(e) =>
+              e.target.files && setFile(e.target.files[0])
+            }
+          />
+          <button
+            onClick={() => {
+              if(!file)return 
+              upload.mutate({ file })
+            }}
+            disabled={upload.isPending}
+          >
+            {upload.isPending ? "Uploading..." : "Upload"}
+          </button>
+          {ds.pieces.map((p) => (
+            <div key={p.id.toString()}>
+              <p>Piece {p.id.toString()}: {p.cid.toString()}</p>
+              <p>URL: {p.url}</p>
+              <p>Metadata: {JSON.stringify(p.metadata)}</p>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+```
+
+Check out the [Synapse React Reference](/reference/filoz/synapse-react/toc/) for all available query and mutation hooks.

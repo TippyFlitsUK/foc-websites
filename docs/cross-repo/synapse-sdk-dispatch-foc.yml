@@ -1,0 +1,64 @@
+# PROPOSED workflow to add to FilOzone/synapse-sdk at
+# `.github/workflows/dispatch-foc.yml`.
+#
+# Purpose
+# -------
+# docs.filecoin.cloud is rebuilt from synapse-sdk's typedoc output. That site
+# lives in a separate repo (TippyFlitsUK/foc-websites). This workflow fires a
+# `repository_dispatch` event at foc-websites every time the SDK changes
+# so the published docs stay in sync without a schedule-polling cron.
+#
+# Setup (one-off)
+# ---------------
+# 1. In foc-websites, a PAT is minted with "contents: write + actions: write"
+#    scope on the foc-websites repo only.
+# 2. That PAT is added to synapse-sdk as the repo secret
+#    `FOC_WEBSITES_DISPATCH_TOKEN`.
+# 3. This workflow is committed to synapse-sdk's main branch.
+#
+# From then on:
+#   - any push to main that touches package source OR docs content, OR
+#   - any GitHub release publish
+# dispatches an `sdk-released` event to foc-websites, which rebuilds + deploys
+# docs.filecoin.cloud with the latest typedoc output.
+#
+# No change to our current build process in synapse-sdk — this is purely a
+# notifier.
+
+name: Notify foc-websites
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'docs/src/**'
+      - 'docs/astro.config.mjs'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Optional SHA or ref to build docs from (defaults to dispatching commit)'
+        required: false
+
+concurrency:
+  group: notify-foc-websites
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch sdk-released to foc-websites
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.FOC_WEBSITES_DISPATCH_TOKEN }}
+          repository: TippyFlitsUK/foc-websites
+          event-type: sdk-released
+          client-payload: |
+            {
+              "sha": "${{ github.event.inputs.ref || github.sha }}",
+              "ref_name": "${{ github.ref_name }}",
+              "event": "${{ github.event_name }}"
+            }
