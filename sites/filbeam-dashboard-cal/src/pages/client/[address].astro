@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import ClientDetail from '../../components/react/ClientDetail.tsx'
+
+// Build-time: query D1 directly to enumerate client addresses so Astro can
+// pre-render one static page per client. Everything else (stats, charts) is
+// fetched live at page view via the Worker /api/client/<addr>.json endpoint.
+const NETWORK = process.env.NETWORK || 'calibration'
+
+export async function getStaticPaths() {
+  const network = process.env.NETWORK || 'calibration'
+  const dbByNetwork: Record<string, string | undefined> = {
+    mainnet: process.env.CLOUDFLARE_D1_MAINNET,
+    calibration: process.env.CLOUDFLARE_D1_CALIBRATION,
+  }
+  const account = process.env.CLOUDFLARE_ACCOUNT_ID
+  const token = process.env.CLOUDFLARE_API_KEY
+  const db = dbByNetwork[network]
+  if (!account || !token || !db) {
+    console.warn(
+      '[client/[address]] Missing CF creds — emitting zero static paths. ' +
+      'Set CLOUDFLARE_API_KEY, CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_D1_* to build client pages.',
+    )
+    return []
+  }
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${db}/query`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        sql: `SELECT DISTINCT payer_address FROM data_sets WHERE with_cdn = true ORDER BY payer_address;`,
+      }),
+    },
+  )
+  if (!res.ok) throw new Error(`D1 clients query ${res.status}: ${await res.text()}`)
+  const json = await res.json()
+  const rows = json.result[0].results as Array<{ payer_address: string }>
+  return rows.map((r) => ({ params: { address: r.payer_address } }))
+}
+
+const { address } = Astro.params as { address: string }
+---
+<BaseLayout title="Client Summary">
+  <div class="hero">
+    <a href="/"><img src="/media/filbeam-logo.png" alt="FilBeam Logo" width="300" /></a>
+    <h2>FilBeam Dashboard</h2>
+  </div>
+  <ClientDetail address={address} network={NETWORK} client:load />
+</BaseLayout>

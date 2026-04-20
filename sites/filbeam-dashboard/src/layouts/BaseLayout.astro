@@ -1,0 +1,225 @@
+---
+interface Props {
+  title?: string
+  description?: string
+}
+
+const SITE_DESCRIPTION =
+  'Live retrieval and payments dashboard for Filecoin Beam — storage provider metrics, egress, and client stats on the Filecoin Onchain Cloud.'
+const { title, description } = Astro.props
+
+const network = process.env.NETWORK || 'calibration'
+const networkLabel = network.charAt(0).toUpperCase() + network.slice(1)
+const pageTitle = title
+  ? `${title} | FilBeam Dashboard`
+  : `FilBeam Dashboard (${networkLabel})`
+const metaDescription = description ?? SITE_DESCRIPTION
+const canonPath =
+  Astro.url.pathname === '/'
+    ? '/'
+    : Astro.url.pathname.endsWith('/')
+      ? Astro.url.pathname
+      : `${Astro.url.pathname}/`
+const canonical = new URL(canonPath, Astro.site).href
+const isStaging = import.meta.env.PROD_BUILD !== '1'
+---
+<!DOCTYPE html>
+<html lang="en" data-network={network}>
+<head>
+  <meta charset="utf-8" />
+  <title>{pageTitle}</title>
+  <meta content={metaDescription} name="description" />
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+  <meta content={pageTitle} property="og:title" />
+  <meta content={metaDescription} property="og:description" />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href={canonical} />
+  {isStaging && <meta name="robots" content="noindex, nofollow" />}
+  <link rel="icon" href="/media/filbeam-logo.png" type="image/png" sizes="32x32" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&display=swap" crossorigin />
+  <link rel="stylesheet" href="/_observablehq/theme-air.css" />
+  <link rel="stylesheet" href="/_observablehq/stdlib/inputs.css" />
+</head>
+<body>
+  <main id="observablehq-main">
+    <slot />
+  </main>
+
+  <footer id="observablehq-footer" class="site-footer">
+    <div class="built-line">
+      Serving live data — <a href="https://github.com/TippyFlitsUK/foc-websites" target="_blank" rel="noopener">view source on GitHub</a>
+    </div>
+    <div class="foc-badge">
+      <a href="https://filecoin.cloud" target="_blank" rel="noopener">
+        <span>Hosted on</span>
+        <img src="/media/foc-logo-dark.svg" alt="Filecoin Onchain Cloud" loading="lazy" />
+      </a>
+    </div>
+  </footer>
+</body>
+</html>
+
+<style is:global>
+  /* Body layout matches Observable Framework's #observablehq-main: max-width 1440 centered. */
+  body { max-width: 1440px; margin: auto; }
+  body > #observablehq-main { margin: 1rem 2rem; }
+  body > #observablehq-footer { margin: 1rem 2rem; }
+
+  /* FilBeam accent palette — keeps upstream look. */
+  :root {
+    --filbeam-pink: #e30ada;
+    --filbeam-cyan: #4ff8c9;
+    --filbeam-orange: #ffa500;
+  }
+
+  /* Hero (matches src/index.md from github.com/filbeam/dashboard). */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: var(--sans-serif);
+    margin: 4rem 0 8rem;
+    text-wrap: balance;
+    text-align: center;
+  }
+  .hero h2 {
+    margin: 0;
+    max-width: 34em;
+    font-size: 20px;
+    font-style: initial;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--theme-foreground-muted);
+  }
+  .hero img { max-width: 20%; }
+  .hero .network-toggle {
+    font-family: var(--monospace);
+    margin-top: 0.25rem;
+    color: var(--theme-foreground-muted);
+  }
+  .hero .network-toggle a { color: var(--theme-foreground-focus); }
+  [data-network=mainnet] .network-toggle a[data-network=mainnet],
+  [data-network=calibration] .network-toggle a[data-network=calibration] {
+    font-weight: 700;
+  }
+
+  /* Card figure — big pink number, matches upstream .card-figure. */
+  .card-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0;
+    font-size: 3vw;
+    color: var(--filbeam-pink);
+  }
+  @media (min-width: 640px) {
+    .card-figure { font-size: 40px; }
+  }
+
+  /* Divider (upstream: <div class="divider"></div>). */
+  .divider { margin: 50px 0; }
+
+  /* theme-air caps p/h1-h6/table/figure at 640px. In dashboards we want tables
+     and chart containers to fill the available width. Scope the override to
+     our dashboard-specific wrappers so body text in card headings stays capped. */
+  .card,
+  .card > table,
+  .card > div > table,
+  .card table,
+  .card figure,
+  .card svg,
+  .map-container,
+  .map-container svg,
+  .map-container figure {
+    max-width: none;
+  }
+  .card { margin: 0; }
+
+  /* Scrollable table with sticky white header — matches Observable Inputs.table. */
+  .dashboard-table {
+    max-height: 373px;
+    overflow: auto;
+    padding: 0;
+  }
+  .dashboard-table table {
+    width: 100%;
+    table-layout: auto;
+    margin: 0;
+  }
+  .dashboard-table thead tr {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--theme-background);
+  }
+  .dashboard-table th {
+    background: var(--theme-background);
+    padding: 6px 6.5px 6px 0;
+  }
+  .dashboard-table th:first-child,
+  .dashboard-table td:first-child {
+    padding-left: 6.5px;
+  }
+  .dashboard-table td {
+    padding: 3px 6.5px;
+  }
+
+  /* Plot chart base. */
+  .plot { background: transparent; }
+  figure.plot { margin: 0; }
+
+  /* Error/loading badges. */
+  .loading {
+    padding: 2rem;
+    text-align: center;
+    color: var(--theme-foreground-muted);
+    font-style: italic;
+  }
+  .error {
+    padding: 1rem;
+    background: color-mix(in srgb, var(--theme-red), var(--theme-background) 90%);
+    border-left: solid 3px var(--theme-red);
+    border-radius: 0 4px 4px 0;
+    color: var(--theme-red);
+    margin: 1rem 0;
+  }
+
+  /* Our hosted-on footer — sits below the main content. */
+  .site-footer { margin-top: 4rem; }
+  .site-footer .built-line {
+    padding: 1rem 0;
+    text-align: center;
+    font: 12px var(--sans-serif);
+    color: var(--theme-foreground-muted);
+  }
+  .site-footer .built-line a {
+    text-decoration: underline;
+    color: var(--theme-foreground-focus);
+  }
+  .foc-badge {
+    width: 100%;
+    text-align: center;
+    padding: 2rem 0 1rem;
+    border-top: solid 1px var(--theme-foreground-faintest);
+  }
+  .foc-badge a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+  }
+  .foc-badge span {
+    font: 14px var(--sans-serif);
+    color: var(--theme-foreground-muted);
+  }
+  .foc-badge img {
+    height: 48px;
+    width: auto;
+  }
+
+  /* Use Plot's line colour scheme overrides to match upstream cyan + orange. */
+  .plot [aria-label="line"] path[stroke="currentColor"]:nth-of-type(1) { stroke: var(--filbeam-cyan); }
+  .plot [aria-label="line"] path[stroke="currentColor"]:nth-of-type(2) { stroke: var(--filbeam-orange); }
+</style>

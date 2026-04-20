@@ -30,3 +30,4 @@ nova-output.json
 
 # upstream source reference clones (not part of this monorepo)
 sites/*-src/
+.wrangler/

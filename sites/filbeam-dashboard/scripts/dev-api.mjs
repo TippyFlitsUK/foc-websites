@@ -1,25 +1,27 @@
-const GATEWAYS = [
-  { name: 'dweb.link', url: (cid, path) => `https://${cid}.ipfs.dweb.link${path}` },
-  { name: 'ipfs.io', url: (cid, path) => `https://ipfs.io/ipfs/${cid}${path}` },
-  { name: '4everland.io', url: (cid, path) => `https://${cid}.ipfs.4everland.io${path}` },
-]
+// Local-only HTTP server mirroring the production Worker's /api/* routes.
+// Used during `npm run dev` when the real Worker isn't reachable. Talks
+// directly to filbeam's D1 HTTP API with the creds in process.env.
+//
+// NOT USED IN PRODUCTION — the deployed Worker serves /api/* at the edge.
+import { createServer } from 'node:http'
 
-const PER_GATEWAY_TIMEOUT_MS = 15000
-const EDGE_CACHE_TTL_SECONDS = 300
-const API_CACHE_TTL_SECONDS = 300
+const NETWORK = process.env.NETWORK || 'calibration'
+const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID
+const KEY = process.env.CLOUDFLARE_API_KEY
+const DB =
+  NETWORK === 'mainnet'
+    ? process.env.CLOUDFLARE_D1_MAINNET
+    : process.env.CLOUDFLARE_D1_CALIBRATION
+const PORT = Number(process.env.DEV_API_PORT || 8788)
 
-// Per-host D1 binding. Maps a request hostname to which filbeam D1 database to query.
-// Keys must cover every FOC-served host (staging + production) that needs live data.
-const D1_BY_HOST = {
-  // Staging (Cloudflare)
-  'beam-dash.filecoincloud.io': 'D1_MAINNET',
-  'beam-dash-cal.filecoincloud.io': 'D1_CALIBRATION',
-  // Production (post-cutover)
-  'dashboard.filbeam.com': 'D1_MAINNET',
-  'calibration.dashboard.filbeam.com': 'D1_CALIBRATION',
+if (!ACCOUNT || !KEY || !DB) {
+  console.error(
+    '[dev-api] missing env: need CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_KEY, CLOUDFLARE_D1_' +
+      (NETWORK === 'mainnet' ? 'MAINNET' : 'CALIBRATION'),
+  )
+  process.exit(1)
 }
 
-// Named queries served from /api/<name>.json. Cached at the edge.
 const QUERIES = {
   'platform-stats': {
     sql: `WITH ttfb_ranked AS (
@@ -147,10 +149,6 @@ const QUERIES = {
           FROM client_stats cs LEFT JOIN client_quotas cq ON cs.payer_address = cq.payer_address
           ORDER BY cs.total_requests DESC;`,
   },
-  'clients': {
-    sql: `SELECT DISTINCT payer_address FROM data_sets
-          WHERE with_cdn = true ORDER BY payer_address;`,
-  },
   'client-daily': {
     sql: `SELECT DATE(rl.timestamp) AS day, ds.payer_address,
             COUNT(rl.id) AS total_requests,
@@ -160,7 +158,6 @@ const QUERIES = {
           FROM retrieval_logs rl JOIN data_sets ds ON rl.data_set_id = ds.id
           WHERE ds.payer_address = ?1 AND day < DATE('now')
           GROUP BY day, ds.payer_address ORDER BY day DESC;`,
-    params: 1,
   },
   'client-proof-sets': {
     sql: `SELECT ds.id AS data_set_id,
@@ -175,223 +172,96 @@ const QUERIES = {
           WHERE ds.payer_address = ?1 AND ds.with_cdn = 1
             AND (rl.timestamp IS NULL OR DATE(rl.timestamp) < DATE('now'))
           GROUP BY ds.id ORDER BY total_requests DESC;`,
-    params: 1,
   },
 }
 
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url)
-    const host = url.hostname
-    const path = url.pathname
+const cache = new Map() // key -> { body, expires }
+const CACHE_TTL_MS = 60_000
 
-    if (path.startsWith('/api/')) {
-      return handleApi(request, env, ctx, host, path, url.searchParams)
-    }
-    return handleIpfs(request, env, ctx, host, url.pathname + url.search)
-  },
-}
-
-async function handleApi(request, env, ctx, host, path, search) {
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    return new Response('Method not allowed', { status: 405 })
-  }
-
-  const dbKey = D1_BY_HOST[host]
-  if (!dbKey) {
-    return new Response(`No D1 binding for host ${host}`, { status: 404 })
-  }
-  const dbId = env[dbKey]
-  if (!dbId) {
-    return new Response(`Missing Worker secret ${dbKey}`, { status: 500 })
-  }
-
-  // Routes:
-  //   /api/<query>.json           — single query with no params
-  //   /api/client/<addr>.json     — two-query bundle (daily + proof sets)
-  let queryName, params
-  if (path.startsWith('/api/client/') && path.endsWith('.json')) {
-    const addr = path.slice('/api/client/'.length, -'.json'.length).toLowerCase()
-    if (!/^0x[0-9a-f]{40}$/.test(addr)) {
-      return new Response('invalid client address', { status: 400 })
-    }
-    return await serveClientBundle(request, env, ctx, dbId, addr)
-  }
-
-  const m = path.match(/^\/api\/([a-z-]+)\.json$/)
-  if (!m) return new Response('not found', { status: 404 })
-  queryName = m[1]
-  const q = QUERIES[queryName]
-  if (!q) return new Response('unknown query', { status: 404 })
-  if (q.params) {
-    return new Response('query requires params not in path', { status: 400 })
-  }
-
-  return cacheWrap(request, ctx, () => runD1(env, dbId, q, []))
-}
-
-async function serveClientBundle(request, env, ctx, dbId, addr) {
-  return cacheWrap(request, ctx, async () => {
-    const [daily, proofSets] = await Promise.all([
-      runD1Raw(env, dbId, QUERIES['client-daily'], [addr]),
-      runD1Raw(env, dbId, QUERIES['client-proof-sets'], [addr]),
-    ])
-    return new Response(JSON.stringify({ daily, proofSets }), {
-      status: 200,
+async function runQuery(sql, params = []) {
+  const res = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/d1/database/${DB}/query`,
+    {
+      method: 'POST',
       headers: {
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': `public, max-age=${API_CACHE_TTL_SECONDS}`,
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${KEY}`,
       },
-    })
-  })
-}
-
-async function runD1(env, dbId, q, params) {
-  const rows = await runD1Raw(env, dbId, q, params)
-  const body = JSON.stringify(q.first ? rows[0] ?? null : rows)
-  return new Response(body, {
-    status: 200,
-    headers: {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': `public, max-age=${API_CACHE_TTL_SECONDS}`,
+      body: JSON.stringify({ sql, params }),
     },
-  })
-}
-
-async function runD1Raw(env, dbId, q, params) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${env.FILBEAM_ACCOUNT_ID}/d1/database/${dbId}/query`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.FILBEAM_D1_TOKEN}`,
-    },
-    body: JSON.stringify({ sql: q.sql, params }),
-    cf: { cacheTtl: 60, cacheEverything: true },
-  })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`D1 ${res.status}: ${text}`)
-  }
+  )
+  if (!res.ok) throw new Error(`D1 ${res.status}: ${await res.text()}`)
   const json = await res.json()
   return json.result[0].results
 }
 
-async function cacheWrap(request, ctx, fn) {
-  const cache = caches.default
-  const key = new Request(request.url, request)
-  const cached = await cache.match(key)
-  if (cached) {
-    const res = new Response(cached.body, cached)
-    res.headers.set('x-foc-cache', 'HIT')
-    return res
-  }
-  try {
-    const res = await fn()
-    res.headers.set('x-foc-cache', 'MISS')
-    if (res.ok && request.method === 'GET') {
-      ctx.waitUntil(cache.put(key, res.clone()))
-    }
-    return res
-  } catch (err) {
-    return new Response(`upstream error: ${err.message}`, {
-      status: 502,
-      headers: { 'content-type': 'text/plain; charset=utf-8' },
-    })
-  }
-}
-
-async function handleIpfs(request, env, ctx, host, path) {
-  const cid = await env.CIDS.get(host)
-  if (!cid) {
-    return new Response(`No CID registered for ${host}`, { status: 404 })
-  }
-
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
-    return new Response('Method not allowed', { status: 405 })
-  }
-
-  const cache = caches.default
-  const cacheKey = new Request(request.url, request)
-  const cached = await cache.match(cacheKey)
-  if (cached) {
-    const res = new Response(cached.body, cached)
-    res.headers.set('x-foc-cache', 'HIT')
-    return res
-  }
-
-  const errors = []
-  for (const gw of GATEWAYS) {
-    try {
-      const upstream = gw.url(cid, path)
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), PER_GATEWAY_TIMEOUT_MS)
-
-      const upstreamReq = new Request(upstream, {
-        method: request.method,
-        headers: filterRequestHeaders(request.headers),
-        signal: controller.signal,
-        redirect: 'follow',
-      })
-
-      const upstreamRes = await fetch(upstreamReq, { cf: { cacheTtl: EDGE_CACHE_TTL_SECONDS, cacheEverything: true } })
-      clearTimeout(timeoutId)
-
-      if (upstreamRes.status >= 500 || upstreamRes.status === 408 || upstreamRes.status === 429) {
-        errors.push(`${gw.name}: ${upstreamRes.status}`)
-        continue
-      }
-
-      const response = new Response(upstreamRes.body, {
-        status: upstreamRes.status,
-        statusText: upstreamRes.statusText,
-        headers: filterResponseHeaders(upstreamRes.headers),
-      })
-      response.headers.set('x-foc-gateway', gw.name)
-      response.headers.set('x-foc-cid', cid)
-      response.headers.set('cache-control', `public, max-age=${EDGE_CACHE_TTL_SECONDS}`)
-
-      if (upstreamRes.ok && request.method === 'GET') {
-        ctx.waitUntil(cache.put(cacheKey, response.clone()))
-      }
-
-      return response
-    } catch (err) {
-      errors.push(`${gw.name}: ${err.name === 'AbortError' ? 'timeout' : err.message}`)
-    }
-  }
-
-  return new Response(`All IPFS gateways failed for CID ${cid}\n\n${errors.join('\n')}`, {
-    status: 502,
-    headers: { 'content-type': 'text/plain; charset=utf-8' },
+function reply(res, status, body, contentType = 'application/json') {
+  res.writeHead(status, {
+    'Content-Type': contentType,
+    'Access-Control-Allow-Origin': '*',
   })
+  res.end(body)
 }
 
-function filterRequestHeaders(headers) {
-  const out = new Headers()
-  const keep = ['accept', 'accept-encoding', 'accept-language', 'range', 'if-none-match', 'if-modified-since', 'user-agent']
-  for (const [k, v] of headers) {
-    if (keep.includes(k.toLowerCase())) out.set(k, v)
-  }
-  return out
-}
+createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`)
+  const path = url.pathname
+  console.log(`[dev-api] ${req.method} ${path}`)
 
-function filterResponseHeaders(headers) {
-  const out = new Headers()
-  const drop = [
-    'set-cookie',
-    'x-ipfs-path',
-    'x-ipfs-roots',
-    'x-ipfs-pop',
-    'server',
-    'cf-ray',
-    'nel',
-    'report-to',
-    'expect-ct',
-    'alt-svc',
-  ]
-  for (const [k, v] of headers) {
-    if (!drop.includes(k.toLowerCase())) out.set(k, v)
+  if (!path.startsWith('/api/')) return reply(res, 404, 'not found', 'text/plain')
+
+  const cached = cache.get(path)
+  if (cached && cached.expires > Date.now()) {
+    res.setHeader('X-Cache', 'HIT')
+    return reply(res, 200, cached.body)
   }
-  return out
-}
+
+  try {
+    let body
+    if (path.startsWith('/api/client/') && path.endsWith('.json')) {
+      const addr = path.slice('/api/client/'.length, -'.json'.length).toLowerCase()
+      if (!/^0x[0-9a-f]{40}$/.test(addr)) return reply(res, 400, '{"error":"invalid address"}')
+      const [daily, proofSets] = await Promise.all([
+        runQuery(QUERIES['client-daily'].sql, [addr]),
+        runQuery(QUERIES['client-proof-sets'].sql, [addr]),
+      ])
+      body = JSON.stringify({ daily, proofSets })
+    } else {
+      const m = path.match(/^\/api\/([a-z-]+)\.json$/)
+      if (!m) return reply(res, 404, 'not found', 'text/plain')
+      const q = QUERIES[m[1]]
+      if (!q) return reply(res, 404, `unknown query ${m[1]}`, 'text/plain')
+      const rows = await runQuery(q.sql, [])
+      body = JSON.stringify(q.first ? (rows[0] ?? null) : rows)
+    }
+    cache.set(path, { body, expires: Date.now() + CACHE_TTL_MS })
+    res.setHeader('X-Cache', 'MISS')
+    reply(res, 200, body)
+  } catch (err) {
+    console.error(`[dev-api] ${path}: ${err.message}`)
+    reply(res, 502, JSON.stringify({ error: err.message }))
+  }
+}).listen(PORT, '0.0.0.0', async () => {
+  console.log(`[dev-api] listening on http://0.0.0.0:${PORT} (network=${NETWORK})`)
+  // Pre-warm cache: kick off every parameterless query at startup so the first
+  // visitor doesn't wait 20+ seconds on heavy D1 queries (calibration in
+  // particular — the NTILE window over 500K rows is right at the CPU limit).
+  console.log('[dev-api] pre-warming cache...')
+  const names = Object.entries(QUERIES)
+    .filter(([, q]) => !q.sql.includes('?1'))
+    .map(([n]) => n)
+  await Promise.all(
+    names.map(async (name) => {
+      const path = `/api/${name}.json`
+      try {
+        const rows = await runQuery(QUERIES[name].sql, [])
+        const body = JSON.stringify(QUERIES[name].first ? (rows[0] ?? null) : rows)
+        cache.set(path, { body, expires: Date.now() + CACHE_TTL_MS })
+        console.log(`  ${name} warmed (${body.length} bytes)`)
+      } catch (err) {
+        console.error(`  ${name} FAILED: ${err.message}`)
+      }
+    }),
+  )
+  console.log('[dev-api] cache warm')
+})

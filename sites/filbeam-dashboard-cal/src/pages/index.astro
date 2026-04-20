@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import DashboardHome from '../components/react/DashboardHome.tsx'
+---
+<BaseLayout>
+  <div class="hero">
+    <a href="https://filbeam.com" target="_blank" rel="noopener"><img src="/media/filbeam-logo.png" alt="FilBeam Logo" width="300" /></a>
+    <h2>FilBeam Dashboard</h2>
+    <div class="network-toggle">
+      <a href="https://beam-dash.filecoincloud.io" data-network="mainnet"><code>mainnet</code></a>
+      &nbsp;-&nbsp;
+      <a href="https://beam-dash-cal.filecoincloud.io" data-network="calibration"><code>calibration</code></a>
+    </div>
+  </div>
+
+  <DashboardHome client:load />
+</BaseLayout>
