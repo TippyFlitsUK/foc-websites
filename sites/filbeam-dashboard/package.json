@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "NETWORK=mainnet CLOUDFLARE_DATABASE_ID=$CLOUDFLARE_D1_MAINNET observable build",
+    "build": "NETWORK=mainnet CLOUDFLARE_DATABASE_ID=$CLOUDFLARE_D1_MAINNET observable build && node scripts/pretty-urls.mjs",
     "clean": "rimraf src/.observablehq/cache",
     "dev": "NETWORK=mainnet CLOUDFLARE_DATABASE_ID=$CLOUDFLARE_D1_MAINNET observable preview --host 0.0.0.0"
   },
