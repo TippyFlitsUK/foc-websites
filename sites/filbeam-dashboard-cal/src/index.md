@@ -33,9 +33,9 @@ document.body.dataset.network = NETWORK
   <body><a href="https://filbeam.com" target="_blank" rel="noopener noreferrer"><img src="media/filbeam-logo.png" alt="FilBeam Logo" width="300" /></a><body>
     <h2>FilBeam Dashboard</h2>
     <div>
-      <a href="https://dashboard.filbeam.com" data-network='mainnet'><code>mainnet</code></a>
+      <a href="https://beam-dash.filecoincloud.io" data-network='mainnet'><code>mainnet</code></a>
       -
-      <a href="https://calibration.dashboard.filbeam.com" data-network="calibration"><code>calibration</code></a>
+      <a href="https://beam-dash-cal.filecoincloud.io" data-network="calibration"><code>calibration</code></a>
     </div>
 </div>
 

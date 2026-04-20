@@ -83,8 +83,7 @@ const cacheHitRate = totalRequests
 </div>
 
 ```js
-// TODO: Load network from config
-const network = 'calibration'
+const { NETWORK: network } = await FileAttachment('../data/network.json').json()
 
 const proofSetStatsTable = Inputs.table(
   proofSetStats.map((item) => {

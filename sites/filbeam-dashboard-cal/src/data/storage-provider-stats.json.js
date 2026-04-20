@@ -18,7 +18,8 @@ retrieval_speeds AS (
     FROM service_provider_retrievals
     WHERE
         cache_miss = 1 AND
-        fetch_ttlb > 0
+        fetch_ttlb > 0 AND
+        timestamp >= datetime('now', '-90 days')
 ),
 percentile_buckets AS (
   SELECT

@@ -5,7 +5,7 @@
   "scripts": {
     "build": "NETWORK=calibration CLOUDFLARE_DATABASE_ID=$CLOUDFLARE_D1_CALIBRATION observable build && node scripts/pretty-urls.mjs",
     "clean": "rimraf src/.observablehq/cache",
-    "dev": "NETWORK=calibration CLOUDFLARE_DATABASE_ID=$CLOUDFLARE_D1_CALIBRATION observable preview --host 0.0.0.0 --port 3001"
+    "dev": "NETWORK=calibration CLOUDFLARE_DATABASE_ID=$CLOUDFLARE_D1_CALIBRATION observable preview --host 0.0.0.0"
   },
   "dependencies": {
     "@observablehq/framework": "^1.12.0",
