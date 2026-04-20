@@ -61,9 +61,15 @@ export function App() {
 					<span className="text-sm text-muted-foreground">Hosted on</span>
 					<img
 						alt="Filecoin Onchain Cloud"
-						className="h-12 w-auto"
+						className="h-12 w-auto block dark:hidden"
 						loading="lazy"
 						src="/foc-logo-dark.svg"
+					/>
+					<img
+						alt="Filecoin Onchain Cloud"
+						className="h-12 w-auto hidden dark:block"
+						loading="lazy"
+						src="/foc-logo-light.svg"
 					/>
 				</a>
 			</footer>
