@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { WeeklyProviderActivity } from '@/utility/types'
+import type { WeeklyProviderActivity } from '@/utility/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertTriangle } from 'lucide-react'

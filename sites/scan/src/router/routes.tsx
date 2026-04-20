@@ -1,13 +1,13 @@
-import { Landing } from '@/pages/Landing'
-import { ProofSetDetails } from '@/pages/ProofSetDetails'
-import { ProofSets } from '@/pages/ProofSets'
-import { ProviderDetails } from '@/pages/ProviderDetails'
-import { PieceDetails } from '@/pages/PieceDetails'
-import { Providers } from '@/pages/Providers'
-import { Services } from '@/pages/Services'
-import { ServiceDetails } from '@/pages/ServiceDetails'
-import { Documentation } from '@/pages/Documentation'
-import { GasCalculator } from '@/pages/GasCalculator'
+import { Landing } from '@/views/Landing'
+import { ProofSetDetails } from '@/views/ProofSetDetails'
+import { ProofSets } from '@/views/ProofSets'
+import { ProviderDetails } from '@/views/ProviderDetails'
+import { PieceDetails } from '@/views/PieceDetails'
+import { Providers } from '@/views/Providers'
+import { Services } from '@/views/Services'
+import { ServiceDetails } from '@/views/ServiceDetails'
+import { Documentation } from '@/views/Documentation'
+import { GasCalculator } from '@/views/GasCalculator'
 import {
   Route,
   Routes,

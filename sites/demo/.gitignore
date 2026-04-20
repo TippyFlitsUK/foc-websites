@@ -1,8 +1,8 @@
 .DS_Store
-dist/
+.astro/
+/dist/
 node_modules/
-*.log
+yarn-error.log
 .env
 .env.production
-.wrangler/
 nova-output.json

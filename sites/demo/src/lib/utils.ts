@@ -1,10 +1,10 @@
-import { type ClassValue, clsx } from "clsx";
-import { toast } from "sonner";
-import { twMerge } from "tailwind-merge";
-import { BaseError } from "viem";
+import { type ClassValue, clsx } from 'clsx'
+import { toast } from 'sonner'
+import { twMerge } from 'tailwind-merge'
+import { BaseError } from 'viem'
 
 export function cn(...inputs: ClassValue[]) {
-	return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 /**
@@ -21,30 +21,23 @@ export function cn(...inputs: ClassValue[]) {
  * truncateMiddle('f1abcdef1234567890abcdef', 4, 4) // "f1ab...cdef"
  * ```
  */
-export function truncateMiddle(
-	str: string,
-	startLen: number,
-	endLen: number,
-): string {
-	if (str.length <= startLen + endLen + 3) return str;
-	return `${str.slice(0, startLen)}...${str.slice(-endLen)}`;
+export function truncateMiddle(str: string, startLen: number, endLen: number): string {
+  if (str.length <= startLen + endLen + 3) return str
+  return `${str.slice(0, startLen)}...${str.slice(-endLen)}`
 }
 
 function formatErrorForToast(error: Error, title?: string) {
-	return {
-		title: title ?? (error instanceof BaseError ? error.name : "Error"),
-		description:
-			error instanceof BaseError
-				? (error.details ?? error.message)
-				: error.message,
-	};
+  return {
+    title: title ?? (error instanceof BaseError ? error.name : 'Error'),
+    description: error instanceof BaseError ? (error.details ?? error.message) : error.message,
+  }
 }
 
 export function toastError(error: Error, id: string, title?: string) {
-	console.error(error);
-	const formattedError = formatErrorForToast(error, title);
-	toast.error(formattedError.title, {
-		description: formattedError.description,
-		id,
-	});
+  console.error(error)
+  const formattedError = formatErrorForToast(error, title)
+  toast.error(formattedError.title, {
+    description: formattedError.description,
+    id,
+  })
 }

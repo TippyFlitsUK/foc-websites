@@ -1,5 +1,5 @@
 import React from 'react'
-import { Provider } from '@/utility/types'
+import type { Provider } from '@/utility/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertTriangle } from 'lucide-react'

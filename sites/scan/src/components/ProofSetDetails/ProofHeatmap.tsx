@@ -4,7 +4,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { type Root } from '@/utility/types'
+import type { Root } from '@/utility/types'
 import { formatDate, decodeRootCid } from '@/utility/helper'
 import { useMemo } from 'react'
 

@@ -1,0 +1,54 @@
+---
+const pageTitle = 'Filecoin Pay'
+const metaDescription = 'Filecoin Pay is explorer and dashboard for Filecoin Pay.'
+const siteUrl = 'https://pay.filecoin.cloud'
+const isStaging = import.meta.env.PROD_BUILD !== '1'
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{pageTitle}</title>
+    <meta content={metaDescription} name="description" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <meta content={pageTitle} property="og:title" />
+    <meta content={metaDescription} property="og:description" />
+    <meta content={siteUrl} property="og:url" />
+    <meta content={pageTitle} property="og:site_name" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={metaDescription} />
+    {isStaging && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/AspektaVF.woff2" crossorigin />
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/FunnelSans-wght.woff2" crossorigin />
+    <style is:global>
+      @font-face {
+        font-family: 'Funnel Sans';
+        src: url('/fonts/FunnelSans-wght.woff2') format('woff2-variations');
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'Aspekta';
+        src: url('/fonts/AspektaVF.woff2') format('woff2-variations');
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      :root {
+        --font-funnel-sans: 'Funnel Sans', Arial, Helvetica, sans-serif;
+        --font-aspekta: 'Aspekta', Arial, Helvetica, sans-serif;
+      }
+    </style>
+    <script async defer src="https://plausible.io/js/pa-69jF95tDk97_PjEsmdMd6.js"></script>
+    <script is:inline>
+      window.plausible = window.plausible || function() { (plausible.q = plausible.q || []).push(arguments) };
+      plausible.init = plausible.init || function(i) { plausible.o = i || {} };
+      plausible.init();
+    </script>
+  </head>
+  <body>
+    <div id="root"><slot /></div>
+  </body>
+</html>

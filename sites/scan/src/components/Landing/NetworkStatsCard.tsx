@@ -1,5 +1,5 @@
 import React from 'react'
-import { NetworkMetrics } from '@/utility/types'
+import type { NetworkMetrics } from '@/utility/types'
 import { MetricItem } from '../shared/MetricItem'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'

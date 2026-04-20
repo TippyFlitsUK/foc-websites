@@ -1,5 +1,5 @@
 import React from 'react'
-import { Root } from '@/utility/types'
+import type { Root } from '@/utility/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'

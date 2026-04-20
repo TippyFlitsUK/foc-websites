@@ -1,0 +1,38 @@
+---
+interface Props {
+  title?: string
+  description?: string
+}
+
+const { title, description } = Astro.props
+const pageTitle = title ?? 'PDP Scan | Filecoin Data Possession Explorer'
+const metaDescription =
+  description ??
+  'PDP Scan - The official explorer for Proof of Data Possession (PDP) on Filecoin. Track providers, proof sets, and network metrics in real-time.'
+const siteUrl = 'https://scan.filecoin.cloud'
+const isStaging = import.meta.env.PROD_BUILD !== '1'
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{pageTitle}</title>
+    <meta content={metaDescription} name="description" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <meta name="keywords" content="PDP, Filecoin, Proof of Data Possession, blockchain, data storage, crypto, web3, FilOzone" />
+    <meta name="author" content="FilOzone" />
+    <meta content={pageTitle} property="og:title" />
+    <meta content={metaDescription} property="og:description" />
+    <meta content={siteUrl} property="og:url" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content={siteUrl} />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={metaDescription} />
+    {isStaging && <meta name="robots" content="noindex, nofollow" />}
+    <link rel="icon" type="image/svg+xml" href="/foc-logo-dark.svg" />
+  </head>
+  <body>
+    <div id="root"><slot /></div>
+  </body>
+</html>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Transaction, EventLog } from '@/utility/types'
+import type { Transaction, EventLog } from '@/utility/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Pagination } from '@/components/ui/pagination'

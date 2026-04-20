@@ -1,7 +1,7 @@
 import useSWRImmutable from 'swr/immutable'
 import { fetcher } from '../utility/fetcher'
 import { weeklyProviderActivitiesQuery } from '../utility/queries'
-import { WeeklyProviderActivity } from '../utility/types'
+import type { WeeklyProviderActivity } from '../utility/types'
 
 const useWeeklyProviderActivities = (
   providerAddr: string,

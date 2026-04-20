@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useNetwork, Network } from '@/contexts/NetworkContext'
+import { useNetwork,  } from '@/contexts/NetworkContext'
+import type { Network } from '@/contexts/NetworkContext'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 export const NetworkSelector = () => {

@@ -1,0 +1,33 @@
+---
+interface Props {
+  title?: string
+  description?: string
+}
+const {
+  title = 'Filecoin Pin Demo',
+  description = 'Filecoin Pin Website',
+} = Astro.props
+const isStaging = import.meta.env.PROD_BUILD !== '1'
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {isStaging && <meta name="robots" content="noindex, nofollow" />}
+    <script async src="https://plausible.io/js/pa-DdqgKMNgoi0ZkQCqD5DSZ.js"></script>
+    <script is:inline>
+      window.plausible = window.plausible || function() { (plausible.q = plausible.q || []).push(arguments) };
+      plausible.init = plausible.init || function(i) { plausible.o = i || {} };
+      plausible.init();
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <slot />
+    </div>
+  </body>
+</html>

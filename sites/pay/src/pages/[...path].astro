@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import { Root } from '../Root.tsx'
+
+// Pre-render every client-side route so IPFS gateways serve the SPA shell
+// for deep links.
+export function getStaticPaths() {
+  return [
+    'mainnet',
+    'mainnet/accounts',
+    'mainnet/operators',
+    'mainnet/rails',
+    'calibration',
+    'calibration/accounts',
+    'calibration/operators',
+    'calibration/rails',
+    'console',
+  ].map((p) => ({ params: { path: p } }))
+}
+---
+<BaseLayout>
+  <Root client:only="react" />
+</BaseLayout>

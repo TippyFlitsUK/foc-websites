@@ -4,30 +4,45 @@ export const Footer = () => {
       <div className="flex justify-center items-center">
         <p>
           Made with ❤️ by{' '}
-          <a href="https://github.com/FilOzone" target="_blank" rel="noopener">
+          <a href="https://github.com/FilOzone" target="_blank" rel="noopener noreferrer">
             FilOz
           </a>
         </p>
       </div>
       <div
-        className="w-full text-center pt-8 pb-4 mt-8"
-        style={{ borderTop: '1px solid var(--sl-color-gray-5, #e0e0e0)' }}
+        className="foc-badge"
+        style={{
+          width: '100%',
+          textAlign: 'center',
+          padding: '2rem 0 3rem',
+          marginTop: '2rem',
+          borderTop: '1px solid rgba(0,0,0,0.1)',
+        }}
       >
         <a
           href="https://filecoin.cloud"
           target="_blank"
           rel="noopener"
-          className="inline-flex items-center gap-3 no-underline"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none' }}
         >
-          <span className="text-sm text-gray-500">Hosted on</span>
+          <span style={{ fontSize: '0.875rem', color: '#6f6f6f' }}>Hosted on</span>
           <img
             src="/foc-logo-dark.svg"
             alt="Filecoin Onchain Cloud"
             loading="lazy"
-            className="h-12 w-auto"
+            style={{ height: '48px', width: 'auto' }}
+            className="foc-badge-dark"
+          />
+          <img
+            src="/foc-logo-light.svg"
+            alt="Filecoin Onchain Cloud"
+            loading="lazy"
+            style={{ height: '48px', width: 'auto', display: 'none' }}
+            className="foc-badge-light"
           />
         </a>
       </div>
+      <style>{`:root.dark .foc-badge-dark{display:none!important}:root.dark .foc-badge-light{display:inline!important}`}</style>
     </>
   )
 }

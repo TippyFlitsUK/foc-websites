@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@import "@filecoin-foundation/ui-filecoin/styles";
+@import "../ui-filecoin/styles/globals.css";
+
+@source "../../node_modules/@filecoin-foundation/ui-filecoin";
+@source "../ui-filecoin";
+@source "../components";
+@source "../views";
+
+@theme {
+  --animate-slide-down: slideDown 300ms ease-out;
+  --animate-slide-up: slideUp 300ms ease-out;
+}

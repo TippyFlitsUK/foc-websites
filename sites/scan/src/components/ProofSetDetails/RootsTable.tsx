@@ -1,5 +1,5 @@
 import React from 'react'
-import { Root } from '@/utility/types'
+import type { Root } from '@/utility/types'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Pagination } from '@/components/ui/pagination'

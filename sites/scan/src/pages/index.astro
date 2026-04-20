@@ -1,0 +1,12 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import { Root } from '../Root.tsx'
+
+// Scan's entire app is a react-router SPA. Every deep-linkable route needs
+// a pre-rendered index.html so IPFS gateways resolve pretty URLs — see
+// getStaticPaths below in the catch-all. This file is the root (/) entry
+// and the react-router inside <Root /> takes it from there.
+---
+<BaseLayout>
+  <Root client:only="react" />
+</BaseLayout>

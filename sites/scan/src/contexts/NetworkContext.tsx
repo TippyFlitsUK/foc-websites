@@ -21,14 +21,14 @@ export const NetworkProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate()
 
   const getSubgraphUrl = (network: Network) => {
-    const PROJECT_ID = import.meta.env.VITE_GOLDSKY_PROJECT_ID || ''
-    const PROJECT_NAME = import.meta.env.VITE_GOLDSKY_PROJECT_NAME || 'pdp'
+    const PROJECT_ID = import.meta.env.PUBLIC_GOLDSKY_PROJECT_ID || ''
+    const PROJECT_NAME = import.meta.env.PUBLIC_GOLDSKY_PROJECT_NAME || 'pdp'
 
     const versions = {
       mainnet:
-        import.meta.env.VITE_GOLDSKY_MAINNET_SUBGRAPH_VERSION || 'mainnet',
+        import.meta.env.PUBLIC_GOLDSKY_MAINNET_SUBGRAPH_VERSION || 'mainnet',
       calibration:
-        import.meta.env.VITE_GOLDSKY_CALIBRATION_SUBGRAPH_VERSION ||
+        import.meta.env.PUBLIC_GOLDSKY_CALIBRATION_SUBGRAPH_VERSION ||
         'calibration',
     }
 
