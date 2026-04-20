@@ -1,0 +1,8 @@
+.DS_Store
+dist/
+node_modules/
+*.log
+.env
+.env.production
+.wrangler/
+nova-output.json
