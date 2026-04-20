@@ -93,9 +93,9 @@ export const search = async (
             }
             return false
           })
-          .map((root) => ({
+          .map((root): SearchResult => ({
             type: 'root' as const,
-            id: root?.proofSet?.setId,
+            id: root?.proofSet?.setId ?? '',
             provider_id: root?.proofSet?.owner?.address,
             data_size: root.rawSize,
             total_roots: Number(root?.proofSet?.totalRoots),

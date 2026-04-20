@@ -1,5 +1,3 @@
-import type { Metadata } from "next";
-
 const BASE_DOMAIN = "pay.filecoin.cloud";
 const BASE_URL = `https://${BASE_DOMAIN}`;
 const ORGANIZATION_NAME = "FilOz";
@@ -23,26 +21,6 @@ const FOC_URLS = {
   },
 };
 
-const METADATA: Metadata = {
-  metadataBase: new URL(BASE_URL),
-  title: META_TITLE,
-  description: META_DESCRIPTION,
-  openGraph: {
-    type: "website",
-    title: META_TITLE,
-    description: META_DESCRIPTION,
-    url: BASE_URL,
-    siteName: META_TITLE,
-    images: [{ url: "/open-graph-image.webp" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: META_TITLE,
-    description: META_DESCRIPTION,
-    images: ["/open-graph-image.webp"],
-  },
-};
-
 export {
   BASE_DOMAIN,
   BASE_URL,
@@ -50,6 +28,7 @@ export {
   FIL_OZ_URL,
   FILECOIN_FOUNDATION_URL,
   FOC_URLS,
-  METADATA,
+  META_TITLE,
+  META_DESCRIPTION,
   ORGANIZATION_NAME,
 };

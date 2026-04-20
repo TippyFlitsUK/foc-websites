@@ -3,7 +3,7 @@ import { githubLightTheme } from '@uiw/react-json-view/githubLight'
 import { githubDarkTheme } from '@uiw/react-json-view/githubDark'
 import { useTheme } from '@/components/shared/ThemeProvider'
 
-const JsonDisplay = ({ jsonData }) => {
+const JsonDisplay = ({ jsonData }: { jsonData: object }) => {
   const { theme } = useTheme()
   return (
     <JsonView

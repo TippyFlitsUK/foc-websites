@@ -61,7 +61,7 @@ export const HeatmapSection: React.FC<HeatmapSectionProps> = ({
               </span>
             )}
           </h2>
-          {totalRoots > initialRootsPerPage && (
+          {initialRootsPerPage != null && totalRoots > initialRootsPerPage && (
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="w-9 p-0">
                 {isHeatmapExpanded ? (

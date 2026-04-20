@@ -1,7 +1,7 @@
 // next/link → plain anchor. Kept API-compatible with common upstream usage.
 import type { ReactNode, AnchorHTMLAttributes } from 'react'
 
-interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
+export interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
   href: string
   prefetch?: boolean
   replace?: boolean

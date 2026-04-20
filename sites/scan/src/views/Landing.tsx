@@ -257,7 +257,7 @@ export const Landing = () => {
                           ? `${result.active_sets} active sets`
                           : result.type === 'root'
                             ? `${result.total_roots} roots`
-                            : `${formatDataSize(result.data_size)}`}
+                            : `${formatDataSize(result.data_size ?? 0)}`}
                       </p>
                     )}
                 </Link>

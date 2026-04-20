@@ -138,7 +138,7 @@ export function useProofSetDetails(
 
   // Update total roots when proofSet data is loaded
   useEffect(() => {
-    if (proofSetData?.dataSets?.length > 0) {
+    if (proofSetData?.dataSets?.length && proofSetData.dataSets.length > 0) {
       setTotalRoots(Number(proofSetData.dataSets[0].totalRoots))
     }
   }, [proofSetData])
