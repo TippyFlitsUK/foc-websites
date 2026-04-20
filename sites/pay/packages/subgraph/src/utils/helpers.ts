@@ -1,0 +1,416 @@
+/* eslint-disable no-underscore-dangle */
+import { Address, Bytes, BigInt as GraphBN, log } from "@graphprotocol/graph-ts";
+import { erc20 } from "../../generated/Payments/erc20";
+import { RailOneTimePaymentProcessed } from "../../generated/Payments/Payments";
+import {
+  Account,
+  OneTimePayment,
+  Operator,
+  OperatorApproval,
+  OperatorToken,
+  Rail,
+  RateChangeQueue,
+  Token,
+  UserToken,
+} from "../../generated/schema";
+import {
+  DEFAULT_DECIMALS,
+  EPOCH_DURATION,
+  NATIVE_TOKEN_DECIMALS,
+  NATIVE_TOKEN_NAME,
+  NATIVE_TOKEN_SYMBOL,
+} from "./constants";
+import {
+  getIdFromTxHashAndLogIndex,
+  getOperatorApprovalEntityId,
+  getOperatorTokenEntityId,
+  getRailEntityId,
+  getRateChangeQueueEntityId,
+  getUserTokenEntityId,
+} from "./keys";
+import { ZERO_BIG_INT } from "./metrics";
+
+class TokenDetails {
+  constructor(
+    public token: Token,
+    public isNew: boolean,
+  ) {}
+}
+
+class AccountWithIsNew {
+  constructor(
+    public account: Account,
+    public isNew: boolean,
+  ) {}
+}
+
+class UserTokenWithIsNew {
+  constructor(
+    public userToken: UserToken,
+    public isNew: boolean,
+  ) {}
+}
+
+class OperatorWithIsNew {
+  constructor(
+    public operator: Operator,
+    public isNew: boolean,
+  ) {}
+}
+
+class OperatorTokenWithIsNew {
+  constructor(
+    public operatorToken: OperatorToken,
+    public isNew: boolean,
+  ) {}
+}
+
+class RateChangeQueueWithIsNew {
+  constructor(
+    public rateChangeQueue: RateChangeQueue,
+    public isNew: boolean,
+  ) {}
+}
+
+// Alternative Account entity function for payments-related code
+export const createOrLoadAccountByAddress = (address: Address): AccountWithIsNew => {
+  let account = Account.load(address);
+
+  if (!account) {
+    account = new Account(address);
+    account.address = address;
+    account.totalRails = ZERO_BIG_INT;
+    account.totalApprovals = ZERO_BIG_INT;
+    account.totalTokens = ZERO_BIG_INT;
+    account.save();
+    return new AccountWithIsNew(account, true);
+  }
+
+  return new AccountWithIsNew(account, false);
+};
+
+// Token entity functions
+export const getTokenDetails = (address: Address): TokenDetails => {
+  let token = Token.load(address);
+
+  if (!token) {
+    token = new Token(address);
+
+    const isNativeToken = address.equals(Address.zero());
+
+    if (isNativeToken) {
+      token.name = NATIVE_TOKEN_NAME;
+      token.symbol = NATIVE_TOKEN_SYMBOL;
+      token.decimals = NATIVE_TOKEN_DECIMALS;
+    } else {
+      const erc20Contract = erc20.bind(address);
+      const tokenNameResult = erc20Contract.try_name();
+      const tokenSymbolResult = erc20Contract.try_symbol();
+      const tokenDecimalsResult = erc20Contract.try_decimals();
+
+      token.name = tokenNameResult.reverted ? "Unknown" : tokenNameResult.value;
+      token.symbol = tokenSymbolResult.reverted ? "UNKNOWN" : tokenSymbolResult.value;
+      token.decimals = tokenDecimalsResult.reverted ? DEFAULT_DECIMALS : GraphBN.fromI32(tokenDecimalsResult.value);
+    }
+
+    token.volume = ZERO_BIG_INT;
+    token.totalDeposits = ZERO_BIG_INT;
+    token.totalWithdrawals = ZERO_BIG_INT;
+    token.totalOneTimePayment = ZERO_BIG_INT;
+    token.totalSettledAmount = ZERO_BIG_INT;
+    token.userFunds = ZERO_BIG_INT;
+    token.operatorCommission = ZERO_BIG_INT;
+    token.lockupCurrent = ZERO_BIG_INT;
+    token.lockupRate = ZERO_BIG_INT;
+    token.lockupLastSettledUntilEpoch = ZERO_BIG_INT;
+    token.totalUsers = ZERO_BIG_INT;
+
+    return new TokenDetails(token, true);
+  }
+
+  return new TokenDetails(token, false);
+};
+
+// UserToken entity functions
+export const createOrLoadUserToken = (account: Address, token: Address): UserTokenWithIsNew => {
+  const id = getUserTokenEntityId(account, token);
+  let userToken = UserToken.load(id);
+
+  if (!userToken) {
+    userToken = new UserToken(id);
+    userToken.account = account;
+    userToken.token = token;
+    userToken.funds = ZERO_BIG_INT;
+    userToken.lockupCurrent = ZERO_BIG_INT;
+    userToken.lockupRate = ZERO_BIG_INT;
+    userToken.lockupLastSettledUntilEpoch = ZERO_BIG_INT;
+    userToken.lockupLastSettledUntilTimestamp = ZERO_BIG_INT;
+    userToken.payout = ZERO_BIG_INT;
+    userToken.fundsCollected = ZERO_BIG_INT;
+    userToken.save();
+    return new UserTokenWithIsNew(userToken, true);
+  }
+
+  return new UserTokenWithIsNew(userToken, false);
+};
+
+// Operator entity functions
+export const createOrLoadOperator = (address: Address): OperatorWithIsNew => {
+  let operator = Operator.load(address);
+
+  if (!operator) {
+    operator = new Operator(address);
+    operator.address = address;
+    operator.totalRails = ZERO_BIG_INT;
+    operator.totalApprovals = ZERO_BIG_INT;
+    operator.totalTokens = ZERO_BIG_INT;
+    operator.save();
+    return new OperatorWithIsNew(operator, true);
+  }
+
+  return new OperatorWithIsNew(operator, false);
+};
+
+// OperatorApproval entity functions
+export const createOperatorApproval = (
+  client: Address,
+  operator: Address,
+  token: Address,
+  lockupAllowance: GraphBN,
+  rateAllowance: GraphBN,
+): OperatorApproval => {
+  const id = getOperatorApprovalEntityId(client, operator, token);
+  const operatorApproval = new OperatorApproval(id);
+  operatorApproval.client = client;
+  operatorApproval.operator = operator;
+  operatorApproval.token = token;
+  operatorApproval.lockupAllowance = lockupAllowance;
+  operatorApproval.lockupUsage = ZERO_BIG_INT;
+  operatorApproval.rateAllowance = rateAllowance;
+  operatorApproval.rateUsage = ZERO_BIG_INT;
+  operatorApproval.save();
+
+  return operatorApproval;
+};
+
+export const createOrLoadOperatorToken = (operator: Bytes, token: Bytes): OperatorTokenWithIsNew => {
+  const id = getOperatorTokenEntityId(operator, token);
+  let operatorToken = OperatorToken.load(id);
+
+  if (!operatorToken) {
+    operatorToken = new OperatorToken(id);
+    operatorToken.operator = operator;
+    operatorToken.token = token;
+    operatorToken.commissionEarned = ZERO_BIG_INT;
+    operatorToken.volume = ZERO_BIG_INT;
+    operatorToken.lockupAllowance = ZERO_BIG_INT;
+    operatorToken.rateAllowance = ZERO_BIG_INT;
+    operatorToken.lockupUsage = ZERO_BIG_INT;
+    operatorToken.rateUsage = ZERO_BIG_INT;
+    operatorToken.settledAmount = ZERO_BIG_INT;
+    operatorToken.oneTimePaymentAmount = ZERO_BIG_INT;
+
+    operatorToken.save();
+
+    return new OperatorTokenWithIsNew(operatorToken, true);
+  }
+
+  return new OperatorTokenWithIsNew(operatorToken, false);
+};
+
+// Rail entity functions
+export const createRail = (
+  railId: GraphBN,
+  payer: Address,
+  payee: Address,
+  operator: Address,
+  token: Address,
+  arbiter: Address,
+  settledUpTo: GraphBN,
+  commissionRateBps: GraphBN,
+  serviceFeeRecipient: Address,
+  timestamp: GraphBN,
+): Rail => {
+  const rail = new Rail(getRailEntityId(railId));
+  rail.railId = railId;
+  rail.payer = payer;
+  rail.payee = payee;
+  rail.operator = operator;
+  rail.token = token;
+  rail.serviceFeeRecipient = serviceFeeRecipient;
+  rail.commissionRateBps = commissionRateBps;
+  rail.paymentRate = ZERO_BIG_INT;
+  rail.lockupFixed = ZERO_BIG_INT;
+  rail.lockupPeriod = ZERO_BIG_INT;
+  rail.settledUpto = settledUpTo;
+  rail.state = "ZERORATE";
+  rail.endEpoch = ZERO_BIG_INT;
+  rail.arbiter = arbiter;
+  rail.totalSettledAmount = ZERO_BIG_INT;
+  rail.totalOneTimePaymentAmount = ZERO_BIG_INT;
+  rail.totalOneTimePayments = ZERO_BIG_INT;
+  rail.totalSettlements = ZERO_BIG_INT;
+  rail.totalRateChanges = ZERO_BIG_INT;
+  rail.createdAt = timestamp;
+  rail.save();
+
+  return rail;
+};
+
+export const createOneTimePayment = (
+  event: RailOneTimePaymentProcessed,
+  railId: Bytes,
+  token: Bytes,
+  totalAmount: GraphBN,
+  networkFee: GraphBN,
+  operatorCommission: GraphBN,
+  netPayeeAmount: GraphBN,
+): OneTimePayment => {
+  const entityId = getIdFromTxHashAndLogIndex(event.transaction.hash, event.logIndex);
+
+  const oneTimePayment = new OneTimePayment(entityId);
+  oneTimePayment.rail = railId;
+  oneTimePayment.token = token;
+  oneTimePayment.totalAmount = totalAmount;
+  oneTimePayment.networkFee = networkFee;
+  oneTimePayment.operatorCommission = operatorCommission;
+  oneTimePayment.netPayeeAmount = netPayeeAmount;
+  oneTimePayment.txHash = event.transaction.hash;
+  oneTimePayment.blockNumber = event.block.number;
+  oneTimePayment.createdAt = event.block.timestamp;
+  oneTimePayment.save();
+
+  return oneTimePayment;
+};
+
+// RateChangeQueue entity functions
+export const createRateChangeQueue = (
+  rail: Rail,
+  startEpoch: GraphBN,
+  untilEpoch: GraphBN,
+  rate: GraphBN,
+): RateChangeQueueWithIsNew => {
+  const id = getRateChangeQueueEntityId(rail.railId, startEpoch);
+  let rateChangeQueue = RateChangeQueue.load(id);
+  const isNew = !rateChangeQueue;
+
+  if (!rateChangeQueue) {
+    rateChangeQueue = new RateChangeQueue(id);
+  }
+  rateChangeQueue.rail = rail.id;
+  rateChangeQueue.startEpoch = startEpoch;
+  rateChangeQueue.untilEpoch = untilEpoch;
+  rateChangeQueue.rate = rate;
+  rateChangeQueue.save();
+
+  return new RateChangeQueueWithIsNew(rateChangeQueue, isNew);
+};
+
+export function updateOperatorLockup(
+  operatorApproval: OperatorApproval | null,
+  oldLockup: GraphBN,
+  newLockup: GraphBN,
+): void {
+  if (!operatorApproval) {
+    return;
+  }
+
+  operatorApproval.lockupUsage = operatorApproval.lockupUsage.minus(oldLockup).plus(newLockup);
+  if (operatorApproval.lockupUsage.lt(ZERO_BIG_INT)) {
+    operatorApproval.lockupUsage = ZERO_BIG_INT;
+  }
+  operatorApproval.save();
+}
+
+export function updateOperatorRate(
+  operatorApproval: OperatorApproval | null,
+  oldRate: GraphBN,
+  newRate: GraphBN,
+): void {
+  if (!operatorApproval) {
+    return;
+  }
+
+  operatorApproval.rateUsage = operatorApproval.rateUsage.minus(oldRate).plus(newRate);
+  if (operatorApproval.rateUsage.lt(ZERO_BIG_INT)) {
+    operatorApproval.rateUsage = ZERO_BIG_INT;
+  }
+}
+
+export function updateOperatorTokenLockup(
+  operatorToken: OperatorToken | null,
+  oldLockup: GraphBN,
+  newLockup: GraphBN,
+): void {
+  if (!operatorToken) {
+    return;
+  }
+
+  operatorToken.lockupUsage = operatorToken.lockupUsage.minus(oldLockup).plus(newLockup);
+  if (operatorToken.lockupUsage.lt(ZERO_BIG_INT)) {
+    operatorToken.lockupUsage = ZERO_BIG_INT;
+  }
+  operatorToken.save();
+}
+
+export function updateOperatorTokenRate(operatorToken: OperatorToken | null, oldRate: GraphBN, newRate: GraphBN): void {
+  if (!operatorToken) {
+    return;
+  }
+
+  operatorToken.rateUsage = operatorToken.rateUsage.minus(oldRate).plus(newRate);
+  if (operatorToken.rateUsage.lt(ZERO_BIG_INT)) {
+    operatorToken.rateUsage = ZERO_BIG_INT;
+  }
+}
+
+export function getLockupLastSettledUntilTimestamp(
+  lockupLastSettledUntilEpoch: GraphBN,
+  blockNumber: GraphBN,
+  blockTimestamp: GraphBN,
+): GraphBN {
+  if (lockupLastSettledUntilEpoch.equals(blockNumber)) return blockTimestamp;
+
+  return blockTimestamp.minus(blockNumber.minus(lockupLastSettledUntilEpoch).times(EPOCH_DURATION));
+}
+
+export function remainingEpochsForTerminatedRail(rail: Rail, blockNumber: GraphBN): GraphBN {
+  if (blockNumber.gt(rail.endEpoch)) {
+    return ZERO_BIG_INT;
+  }
+
+  return rail.endEpoch.minus(blockNumber);
+}
+
+/**
+ * Computes the settled amount of tokens that should be locked up until the given epoch
+ * @param token the token to compute the settled amount for
+ * @param untilEpoch the epoch until which the settled amount should be computed
+ * @returns the settled amount of tokens that should be locked up until the given epoch
+ */
+export function computeSettledLockup(token: Token, untilEpoch: GraphBN): GraphBN {
+  const duration = untilEpoch.minus(token.lockupLastSettledUntilEpoch);
+  return token.lockupCurrent.plus(token.lockupRate.times(duration));
+}
+
+/**
+ * Returns the number of epochs in the settlement window where this rate applies.
+ *
+ * RateChangeQueue semantics:
+ * - `startEpoch` is exclusive: rate applies starting at `startEpoch + 1`
+ * - `untilEpoch` is inclusive: rate applies through `untilEpoch`
+ *
+ * Settlement window semantics:
+ * - `start` is exclusive (previous settled epoch)
+ * - `end` is inclusive (newly settled up to)
+ */
+export function epochsRateChangeApplicable(rateChange: RateChangeQueue, start: GraphBN, end: GraphBN): GraphBN {
+  const windowStart = rateChange.startEpoch.gt(start) ? rateChange.startEpoch : start;
+  const windowEnd = rateChange.untilEpoch.lt(end) ? rateChange.untilEpoch : end;
+
+  if (windowEnd.le(windowStart)) {
+    return ZERO_BIG_INT;
+  }
+
+  return windowEnd.minus(windowStart);
+}

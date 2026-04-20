@@ -1,0 +1,14 @@
+{
+  "name": "pay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Filecoin Pay Explorer (pnpm+turbo monorepo vendored from FilOzone/filecoin-pay-explorer). CI uses this package.json as the monorepo entrypoint: npm ci installs nothing, then npm run build bootstraps pnpm to build the real workspace.",
+  "scripts": {
+    "prepare": "true",
+    "build": "corepack enable && corepack prepare pnpm@9.15.2 --activate && pnpm install --no-frozen-lockfile && pnpm --filter @filecoin-pay/types build && pnpm --filter @filecoin-pay/explorer build && rm -rf dist && cp -r apps/explorer/out dist"
+  },
+  "packageManager": "pnpm@9.15.2",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules
+dist
+.next
+.turbo
+out
+apps/*/out
+apps/*/.next
+.DS_Store
+*.log
+.env.production
+nova-output.json
